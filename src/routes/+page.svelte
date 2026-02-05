@@ -1,84 +1,26 @@
 <script lang="ts">
-  interface Minion {
-    id: string;
-    name: string;
-    tagline: string;
-    description: string;
-    icon: string;
-    features: string[];
-    color: string;
-  }
+  import { onMount } from 'svelte';
+  import CharacterSelector from '$lib/components/CharacterSelector.svelte';
 
-  const minions: Minion[] = [
-    {
-      id: 'accountant',
-      name: 'The Accountant',
-      tagline: 'Your books, perfectly balanced',
-      description: 'Handles invoicing, expense tracking, tax prep, and financial reports. Integrates with your accounting software.',
-      icon: '📊',
-      features: ['Invoicing', 'Expense Tracking', 'Tax Reports', 'Bank Reconciliation'],
-      color: '#10b981'
-    },
-    {
-      id: 'realtor',
-      name: 'The Real Estate Scout',
-      tagline: 'Never miss a good deal',
-      description: 'Scans listings 24/7, alerts you to opportunities, tracks market trends, and manages your property database.',
-      icon: '🏠',
-      features: ['Listing Alerts', 'Market Analysis', 'Property Database', 'Lead Tracking'],
-      color: '#f59e0b'
-    },
-    {
-      id: 'analyst',
-      name: 'The Financial Analyst',
-      tagline: 'Data-driven decisions',
-      description: 'Monitors markets, analyzes portfolios, generates reports, and spots investment opportunities.',
-      icon: '📈',
-      features: ['Portfolio Tracking', 'Market Alerts', 'Risk Analysis', 'Report Generation'],
-      color: '#8b5cf6'
-    },
-    {
-      id: 'restaurant',
-      name: 'The Restaurant Secretary',
-      tagline: 'Your virtual maître d\'',
-      description: 'Takes reservations, manages orders, coordinates with kitchen, and keeps customers informed.',
-      icon: '🍽️',
-      features: ['Table Booking', 'Order Taking', 'Customer Chat', 'Staff Coordination'],
-      color: '#ef4444'
-    },
-    {
-      id: 'scheduler',
-      name: 'The Schedule Master',
-      tagline: 'Your calendar, optimized',
-      description: 'Manages appointments, finds optimal meeting times, sends reminders, and resolves conflicts.',
-      icon: '📅',
-      features: ['Smart Scheduling', 'Conflict Resolution', 'Auto Reminders', 'Time Blocking'],
-      color: '#06b6d4'
-    },
-    {
-      id: 'support',
-      name: 'The Support Agent',
-      tagline: 'Always on, always helpful',
-      description: 'Answers customer queries, routes complex issues, maintains FAQs, and escalates when needed.',
-      icon: '💬',
-      features: ['24/7 Response', 'Ticket Routing', 'FAQ Management', 'Escalation'],
-      color: '#ec4899'
-    }
-  ];
+  let showSelector = false;
+  let hiringMinion: { name: string; color: string } | null = null;
 
-  let selectedMinion: Minion | null = null;
+  onMount(() => {
+    // Check for hire event from CharacterSelector
+    window.addEventListener('hireMinion', ((e: CustomEvent) => {
+      hiringMinion = e.detail;
+      // Scroll to connect section or show modal
+      document.getElementById('connect')?.scrollIntoView({ behavior: 'smooth' });
+    }) as EventListener);
 
-  function selectMinion(minion: Minion) {
-    selectedMinion = minion;
-  }
+    // Entrance animation
+    setTimeout(() => {
+      showSelector = true;
+    }, 300);
+  });
 
-  function closeModal() {
-    selectedMinion = null;
-  }
-
-  function hireMinion(minion: Minion) {
-    alert(`Hiring ${minion.name}... (Backend integration coming soon)`);
-    closeModal();
+  function scrollToSelector() {
+    document.getElementById('character-select')?.scrollIntoView({ behavior: 'smooth' });
   }
 </script>
 
@@ -86,92 +28,135 @@
   <!-- Hero -->
   <section class="hero">
     <div class="hero-glow"></div>
+    <div class="hero-grid"></div>
+    
     <div class="hero-content">
-      <div class="badge">⚡ AI-Powered Assistants</div>
+      <div class="badge">
+        <span class="badge-pulse"></span>
+        🤖 AI-Powered Workforce
+      </div>
+      
       <h1 class="hero-title">
-        Hire a <span class="gradient-text">Minion</span><br />
-        Get More Done
+        Your Army of<br />
+        <span class="gradient-text">Digital Minions</span>
       </h1>
+      
       <p class="hero-subtitle">
-        Pre-configured AI agents that work in your cloud, connect to your tools,<br />
-        and chat with you on WhatsApp or Telegram.
+        Hire specialized AI agents that live in your cloud, integrate with your tools,
+        and communicate via WhatsApp or Telegram.
       </p>
+      
       <div class="hero-cta">
-        <a href="#minions" class="btn btn-primary">Browse Minions</a>
+        <button class="btn btn-primary" on:click={scrollToSelector}>
+          <span class="btn-icon">🎮</span>
+          Choose Your Minion
+        </button>
         <button class="btn btn-secondary" on:click={() => alert('Demo coming soon!')}>
-          See How It Works
+          See It In Action
         </button>
       </div>
+      
       <div class="hero-trust">
-        <span class="trust-item">🔒 Your data stays in your cloud</span>
-        <span class="trust-item">⚡ 5-minute setup</span>
-        <span class="trust-item">💬 WhatsApp & Telegram</span>
+        <div class="trust-badge">
+          <span class="trust-icon">🔒</span>
+          <span>Your data stays in your cloud</span>
+        </div>
+        <div class="trust-badge">
+          <span class="trust-icon">⚡</span>
+          <span>5-minute setup</span>
+        </div>
+        <div class="trust-badge">
+          <span class="trust-icon">💬</span>
+          <span>WhatsApp & Telegram</span>
+        </div>
       </div>
+    </div>
+
+    <!-- Scroll Indicator -->
+    <div class="scroll-indicator" on:click={scrollToSelector} role="button" tabindex="0">
+      <div class="mouse">
+        <div class="wheel"></div>
+      </div>
+      <span>Scroll to select</span>
     </div>
   </section>
 
-  <!-- Minions Grid -->
-  <section id="minions" class="minions-section">
-    <div class="container">
-      <div class="section-header">
-        <h2 class="section-title">Meet Your <span class="gradient-text">Minions</span></h2>
-        <p class="section-subtitle">Specialized AI agents ready to work for you</p>
-      </div>
-
-      <div class="minions-grid">
-        {#each minions as minion}
-          <div 
-            class="minion-card"
-            style="--minion-color: {minion.color}"
-            on:click={() => selectMinion(minion)}
-            on:keypress={(e) => e.key === 'Enter' && selectMinion(minion)}
-            tabindex="0"
-            role="button"
-          >
-            <div class="minion-icon">{minion.icon}</div>
-            <div class="minion-content">
-              <h3 class="minion-name">{minion.name}</h3>
-              <p class="minion-tagline">{minion.tagline}</p>
-              <p class="minion-desc">{minion.description}</p>
-              <div class="minion-features">
-                {#each minion.features.slice(0, 2) as feature}
-                  <span class="feature-tag">{feature}</span>
-                {/each}
-                {#if minion.features.length > 2}
-                  <span class="feature-tag">+{minion.features.length - 2}</span>
-                {/if}
-              </div>
-            </div>
-            <div class="minion-action">
-              <span class="hire-text">Hire →</span>
-            </div>
-          </div>
-        {/each}
-      </div>
-    </div>
+  <!-- Character Selector Section -->
+  <section id="character-select" class="selector-section">
+    <CharacterSelector />
   </section>
 
   <!-- How It Works -->
-  <section class="how-it-works">
+  <section id="how-it-works" class="how-it-works">
+    <div class="section-bg-glow"></div>
+    
     <div class="container">
       <div class="section-header">
-        <h2 class="section-title">How It <span class="gradient-text">Works</span></h2>
+        <span class="section-label">How It Works</span>
+        <h2 class="section-title">
+          Deploy in <span class="gradient-text">3 Steps</span>
+        </h2>
       </div>
-      <div class="steps">
-        <div class="step">
-          <div class="step-number">1</div>
+
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-number">01</div>
+          <div class="step-icon">🎯</div>
           <h3>Pick Your Minion</h3>
-          <p>Choose from specialized AI agents designed for specific tasks</p>
+          <p>Choose from 6 specialized AI agents, each trained for specific tasks.</p>
+          <div class="step-line"></div>
         </div>
-        <div class="step">
-          <div class="step-number">2</div>
+
+        <div class="step-card">
+          <div class="step-number">02</div>
+          <div class="step-icon">🔗</div>
           <h3>Connect Your Tools</h3>
-          <p>Link Google, Microsoft, or any service your Minion needs</p>
+          <p>Link Google Workspace, Microsoft 365, or any API your Minion needs.</p>
+          <div class="step-line"></div>
         </div>
-        <div class="step">
-          <div class="step-number">3</div>
-          <h3>Chat & Delegate</h3>
-          <p>Talk to your Minion via WhatsApp or Telegram</p>
+
+        <div class="step-card">
+          <div class="step-number">03</div>
+          <div class="step-icon">💬</div>
+          <h3>Chat & Command</h3>
+          <p>Delegate tasks via WhatsApp or Telegram. Your Minion works 24/7.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Connect Section -->
+  <section id="connect" class="connect-section">
+    <div class="container">
+      <div class="connect-card">
+        <div class="connect-visual">
+          <div class="floating-icons">
+            <div class="float-icon" style="--delay: 0s">📧</div>
+            <div class="float-icon" style="--delay: 0.5s">📊</div>
+            <div class="float-icon" style="--delay: 1s">📅</div>
+            <div class="float-icon" style="--delay: 1.5s">📱</div>
+          </div>
+        </div>
+        
+        <div class="connect-content">
+          <h2>Ready to deploy your Minion?</h2>
+          <p>Connect with us to get early access and set up your first AI agent.</p>
+          
+          {#if hiringMinion}
+            <div class="selected-minion" style="--minion-color: {hiringMinion.color}">
+              <span>You selected:</span>
+              <strong>{hiringMinion.name}</strong>
+            </div>
+          {/if}
+          
+          <div class="connect-buttons">
+            <a href="mailto:hello@nuts.cash" class="btn btn-primary btn-large">
+              Get Early Access
+            </a>
+            <a href="https://github.com/ticruz38/minion" target="_blank" class="btn btn-secondary btn-large">
+              View on GitHub
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -180,111 +165,133 @@
   <!-- Footer -->
   <footer class="footer">
     <div class="container">
-      <p>© 2025 Minion. AI agents that work for you.</p>
+      <div class="footer-content">
+        <div class="footer-brand">
+          <span class="brand-logo">🤖</span>
+          <span class="brand-name">Minion</span>
+        </div>
+        <p class="footer-tagline">AI agents that work for you</p>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2025 Minion. Built with 💜 by Nuts.Cash</p>
+      </div>
     </div>
   </footer>
 </div>
 
-<!-- Modal -->
-{#if selectedMinion}
-  <div class="modal-overlay" on:click={closeModal} role="button" tabindex="-1" on:keypress={(e) => e.key === 'Escape' && closeModal()}>
-    <div class="modal" on:click|stopPropagation>
-      <button class="modal-close" on:click={closeModal}>×</button>
-      <div class="modal-header" style="--minion-color: {selectedMinion.color}">
-        <div class="modal-icon">{selectedMinion.icon}</div>
-        <h2>{selectedMinion.name}</h2>
-        <p>{selectedMinion.tagline}</p>
-      </div>
-      <div class="modal-body">
-        <p class="modal-description">{selectedMinion.description}</p>
-        <div class="modal-features">
-          <h4>Capabilities:</h4>
-          <div class="features-list">
-            {#each selectedMinion.features as feature}
-              <span class="feature-tag large">{feature}</span>
-            {/each}
-          </div>
-        </div>
-        <div class="modal-info">
-          <div class="info-item">
-            <strong>Communication:</strong> WhatsApp, Telegram
-          </div>
-          <div class="info-item">
-            <strong>Data storage:</strong> Your Google Drive / cloud
-          </div>
-          <div class="info-item">
-            <strong>Setup time:</strong> ~5 minutes
-          </div>
-        </div>
-        <button 
-          class="btn btn-primary btn-large"
-          on:click={() => selectedMinion && hireMinion(selectedMinion)}
-          style="width: 100%; margin-top: 1.5rem;"
-        >
-          Hire {selectedMinion.name}
-        </button>
-      </div>
-    </div>
-  </div>
-{/if}
-
 <style>
-  /* Hero */
+  :global(body) {
+    margin: 0;
+    background: #0a0a0f;
+    color: #f1f5f9;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  .page {
+    min-height: 100vh;
+    background: #0a0a0f;
+  }
+
+  /* Hero Section */
   .hero {
     min-height: 100vh;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     position: relative;
     padding: 2rem;
     text-align: center;
+    overflow: hidden;
   }
 
   .hero-glow {
     position: absolute;
-    inset: 0;
-    background: var(--gradient-glow);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 1000px;
+    height: 1000px;
+    background: radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 60%);
+    filter: blur(100px);
     pointer-events: none;
+  }
+
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
   }
 
   .hero-content {
     position: relative;
-    z-index: 1;
+    z-index: 10;
     max-width: 800px;
   }
 
   .badge {
-    display: inline-block;
-    padding: 0.5rem 1rem;
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
     border-radius: 100px;
     font-size: 0.875rem;
-    color: var(--color-text-muted);
-    margin-bottom: 1.5rem;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 2rem;
+    backdrop-filter: blur(10px);
+    position: relative;
+  }
+
+  .badge-pulse {
+    width: 8px;
+    height: 8px;
+    background: #22d3ee;
+    border-radius: 50%;
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 1; box-shadow: 0 0 10px #22d3ee; }
+    50% { opacity: 0.5; box-shadow: 0 0 20px #22d3ee; }
   }
 
   .hero-title {
-    font-size: clamp(2.5rem, 6vw, 4rem);
+    font-size: clamp(3rem, 7vw, 5rem);
     font-weight: 800;
     margin-bottom: 1.5rem;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: white;
   }
 
   .gradient-text {
-    background: var(--gradient-primary);
+    background: linear-gradient(135deg, #6366f1 0%, #22d3ee 50%, #10b981 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    background-size: 200% auto;
+    animation: gradient-shift 3s ease infinite;
+  }
+
+  @keyframes gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
   }
 
   .hero-subtitle {
     font-size: 1.25rem;
-    color: var(--color-text-muted);
-    margin-bottom: 2rem;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 2.5rem;
     max-width: 600px;
     margin-left: auto;
     margin-right: auto;
+    line-height: 1.6;
   }
 
   .hero-cta {
@@ -296,60 +303,148 @@
   }
 
   .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     padding: 1rem 2rem;
-    border-radius: var(--radius-md);
+    border-radius: 12px;
     font-weight: 600;
     font-size: 1rem;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: none;
+  }
+
+  .btn-icon {
+    font-size: 1.25rem;
   }
 
   .btn-primary {
-    background: var(--gradient-primary);
+    background: linear-gradient(135deg, #6366f1 0%, #22d3ee 100%);
     color: white;
-    box-shadow: var(--shadow-glow);
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
   }
 
   .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 0 60px rgba(99, 102, 241, 0.4);
+    box-shadow: 0 8px 30px rgba(99, 102, 241, 0.5);
   }
 
   .btn-secondary {
-    background: var(--color-bg-card);
-    color: var(--color-text);
-    border: 1px solid var(--color-border);
+    background: rgba(255,255,255,0.05);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.2);
   }
 
   .btn-secondary:hover {
-    background: var(--color-bg-elevated);
-    border-color: var(--color-primary);
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.4);
   }
 
   .btn-large {
-    padding: 1.25rem 2rem;
+    padding: 1.25rem 2.5rem;
     font-size: 1.125rem;
   }
 
   .hero-trust {
     display: flex;
-    gap: 2rem;
+    gap: 1.5rem;
     justify-content: center;
     flex-wrap: wrap;
-    font-size: 0.875rem;
-    color: var(--color-text-muted);
   }
 
-  .trust-item {
+  .trust-badge {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 100px;
+    font-size: 0.875rem;
+    color: rgba(255,255,255,0.6);
   }
 
-  /* Sections */
+  .trust-icon {
+    font-size: 1rem;
+  }
+
+  /* Scroll Indicator */
+  .scroll-indicator {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    color: rgba(255,255,255,0.4);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: color 0.3s ease;
+  }
+
+  .scroll-indicator:hover {
+    color: rgba(255,255,255,0.7);
+  }
+
+  .mouse {
+    width: 24px;
+    height: 40px;
+    border: 2px solid currentColor;
+    border-radius: 12px;
+    position: relative;
+  }
+
+  .wheel {
+    width: 4px;
+    height: 8px;
+    background: currentColor;
+    border-radius: 2px;
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    animation: scroll-wheel 2s ease-in-out infinite;
+  }
+
+  @keyframes scroll-wheel {
+    0%, 100% { opacity: 1; top: 6px; }
+    50% { opacity: 0.3; top: 18px; }
+  }
+
+  /* Selector Section */
+  .selector-section {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #0a0a0f 0%, #111118 50%, #0a0a0f 100%);
+  }
+
+  /* How It Works */
+  .how-it-works {
+    padding: 8rem 2rem;
+    position: relative;
+    background: #0a0a0f;
+  }
+
+  .section-bg-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(34,211,238,0.1) 0%, transparent 60%);
+    filter: blur(100px);
+    pointer-events: none;
+  }
+
   .container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0 1.5rem;
+    position: relative;
+    z-index: 10;
   }
 
   .section-header {
@@ -357,279 +452,249 @@
     margin-bottom: 4rem;
   }
 
-  .section-title {
-    font-size: clamp(2rem, 4vw, 3rem);
+  .section-label {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.5);
     margin-bottom: 1rem;
   }
 
-  .section-subtitle {
-    color: var(--color-text-muted);
-    font-size: 1.125rem;
+  .section-title {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800;
+    color: white;
   }
 
-  /* Minions Grid */
-  .minions-section {
-    padding: 6rem 0;
-  }
-
-  .minions-grid {
+  .steps-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
   }
 
-  .minion-card {
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: 1.5rem;
-    cursor: pointer;
+  .step-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px;
+    padding: 2.5rem;
+    text-align: center;
+    position: relative;
     transition: all 0.3s ease;
+  }
+
+  .step-card:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.15);
+    transform: translateY(-4px);
+  }
+
+  .step-number {
+    position: absolute;
+    top: 1.5rem;
+    left: 1.5rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: rgba(255,255,255,0.2);
+    letter-spacing: 0.1em;
+  }
+
+  .step-icon {
+    font-size: 3rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .step-card h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 0.75rem;
+  }
+
+  .step-card p {
+    color: rgba(255,255,255,0.5);
+    line-height: 1.6;
+  }
+
+  .step-line {
+    position: absolute;
+    top: 50%;
+    right: -2rem;
+    width: 2rem;
+    height: 2px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.2), transparent);
+    display: none;
+  }
+
+  .step-card:not(:last-child) .step-line {
+    display: block;
+  }
+
+  /* Connect Section */
+  .connect-section {
+    padding: 6rem 2rem;
+    background: linear-gradient(180deg, #0a0a0f 0%, #111118 100%);
+  }
+
+  .connect-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 32px;
+    padding: 4rem;
+    display: flex;
+    align-items: center;
+    gap: 4rem;
     position: relative;
     overflow: hidden;
   }
 
-  .minion-card::before {
-    content: '';
+  .connect-visual {
+    flex: 1;
+    position: relative;
+    height: 200px;
+  }
+
+  .floating-icons {
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, var(--minion-color) 0%, transparent 50%);
-    opacity: 0;
-    transition: opacity 0.3s ease;
   }
 
-  .minion-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-    border-color: var(--minion-color);
-  }
-
-  .minion-card:hover::before {
-    opacity: 0.1;
-  }
-
-  .minion-icon {
+  .float-icon {
+    position: absolute;
     font-size: 3rem;
-    margin-bottom: 1rem;
-    position: relative;
+    animation: float 3s ease-in-out infinite;
+    animation-delay: var(--delay);
   }
 
-  .minion-content {
-    position: relative;
+  .float-icon:nth-child(1) { top: 10%; left: 10%; }
+  .float-icon:nth-child(2) { top: 20%; right: 20%; }
+  .float-icon:nth-child(3) { bottom: 20%; left: 30%; }
+  .float-icon:nth-child(4) { bottom: 10%; right: 10%; }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
   }
 
-  .minion-name {
-    font-size: 1.25rem;
-    margin-bottom: 0.25rem;
+  .connect-content {
+    flex: 1;
   }
 
-  .minion-tagline {
-    color: var(--minion-color);
-    font-size: 0.875rem;
-    font-weight: 600;
-    margin-bottom: 0.75rem;
-  }
-
-  .minion-desc {
-    color: var(--color-text-muted);
-    font-size: 0.9375rem;
-    line-height: 1.6;
-    margin-bottom: 1rem;
-  }
-
-  .minion-features {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .feature-tag {
-    padding: 0.25rem 0.75rem;
-    background: var(--color-bg-elevated);
-    border-radius: 100px;
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-    border: 1px solid var(--color-border);
-  }
-
-  .feature-tag.large {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-  }
-
-  .minion-action {
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--color-border);
-    position: relative;
-  }
-
-  .hire-text {
-    color: var(--minion-color);
-    font-weight: 600;
-    font-size: 0.9375rem;
-  }
-
-  /* How It Works */
-  .how-it-works {
-    padding: 6rem 0;
-    background: var(--color-bg-elevated);
-  }
-
-  .steps {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 3rem;
-    text-align: center;
-  }
-
-  .step {
-    padding: 2rem;
-  }
-
-  .step-number {
-    width: 60px;
-    height: 60px;
-    background: var(--gradient-primary);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
+  .connect-content h2 {
+    font-size: 2rem;
     font-weight: 800;
-    margin: 0 auto 1.5rem;
-    box-shadow: var(--shadow-glow);
+    color: white;
+    margin-bottom: 1rem;
   }
 
-  .step h3 {
-    font-size: 1.25rem;
-    margin-bottom: 0.75rem;
+  .connect-content p {
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 1.5rem;
+    font-size: 1.125rem;
   }
 
-  .step p {
-    color: var(--color-text-muted);
+  .selected-minion {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.25rem;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--minion-color);
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+  }
+
+  .selected-minion span {
+    color: rgba(255,255,255,0.6);
+  }
+
+  .selected-minion strong {
+    color: var(--minion-color);
+    font-weight: 700;
+  }
+
+  .connect-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
   }
 
   /* Footer */
   .footer {
-    padding: 3rem 0;
-    text-align: center;
-    color: var(--color-text-muted);
-    border-top: 1px solid var(--color-border);
+    padding: 4rem 2rem 2rem;
+    background: #0a0a0f;
+    border-top: 1px solid rgba(255,255,255,0.05);
   }
 
-  /* Modal */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(8px);
+  .footer-content {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .footer-brand {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1rem;
-    z-index: 1000;
-  }
-
-  .modal {
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    max-width: 500px;
-    width: 100%;
-    max-height: 90vh;
-    overflow-y: auto;
-    position: relative;
-  }
-
-  .modal-close {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    width: 36px;
-    height: 36px;
-    background: var(--color-bg-elevated);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    color: var(--color-text-muted);
-    cursor: pointer;
-    z-index: 10;
-  }
-
-  .modal-close:hover {
-    background: var(--color-border);
-    color: var(--color-text);
-  }
-
-  .modal-header {
-    padding: 2rem;
-    text-align: center;
-    background: linear-gradient(135deg, rgba(0,0,0,0.3) 0%, transparent 100%);
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  .modal-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-  }
-
-  .modal-header h2 {
-    font-size: 1.75rem;
+    gap: 0.75rem;
     margin-bottom: 0.5rem;
   }
 
-  .modal-header p {
-    color: var(--minion-color);
-    font-weight: 600;
+  .brand-logo {
+    font-size: 2rem;
   }
 
-  .modal-body {
-    padding: 1.5rem 2rem 2rem;
+  .brand-name {
+    font-size: 1.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #6366f1 0%, #22d3ee 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
-  .modal-description {
-    color: var(--color-text-muted);
-    margin-bottom: 1.5rem;
-    line-height: 1.7;
+  .footer-tagline {
+    color: rgba(255,255,255,0.4);
+    font-size: 1rem;
   }
 
-  .modal-features {
-    margin-bottom: 1.5rem;
+  .footer-bottom {
+    text-align: center;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255,255,255,0.05);
   }
 
-  .modal-features h4 {
+  .footer-bottom p {
+    color: rgba(255,255,255,0.3);
     font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-text-muted);
-    margin-bottom: 0.75rem;
   }
 
-  .features-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
+  /* Responsive */
+  @media (max-width: 900px) {
+    .steps-grid {
+      grid-template-columns: 1fr;
+    }
 
-  .modal-info {
-    background: var(--color-bg-elevated);
-    border-radius: var(--radius-md);
-    padding: 1rem;
-  }
+    .step-line {
+      display: none !important;
+    }
 
-  .info-item {
-    padding: 0.5rem 0;
-    font-size: 0.9375rem;
-  }
+    .connect-card {
+      flex-direction: column;
+      padding: 2rem;
+      text-align: center;
+    }
 
-  .info-item:not(:last-child) {
-    border-bottom: 1px solid var(--color-border);
-  }
+    .connect-visual {
+      width: 100%;
+    }
 
-  .info-item strong {
-    color: var(--color-primary-light);
+    .hero-trust {
+      flex-direction: column;
+      align-items: center;
+    }
   }
 </style>

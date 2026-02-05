@@ -46,7 +46,10 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 
       return json({ 
         success: true, 
-        message: 'Account connected (demo mode)'
+        message: 'Account connected (demo mode)',
+        access_token: 'demo_token_' + Date.now(),
+        refresh_token: 'demo_refresh_' + Date.now(),
+        expires_in: 3600
       });
     }
 
@@ -94,7 +97,10 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
     return json({ 
       success: true, 
       message: 'Account connected',
-      email: userInfo.email
+      email: userInfo.email,
+      access_token: tokenData.access_token,
+      refresh_token: tokenData.refresh_token,
+      expires_in: tokenData.expires_in
     });
 
   } catch (err) {
@@ -127,9 +133,18 @@ export const GET: RequestHandler = async ({ url }) => {
   }
 
   // Return session status (minion will poll until completed/failed)
-  return json({
+  // Include tokens if session is completed
+  const response: Record<string, unknown> = {
     status: session.status,
     userInfo: session.userInfo,
     error: session.error
-  });
+  };
+
+  if (session.status === 'completed' && session.tokens) {
+    response.access_token = session.tokens.access_token;
+    response.refresh_token = session.tokens.refresh_token;
+    response.expires_in = session.tokens.expires_in;
+  }
+
+  return json(response);
 };
