@@ -1,0 +1,4 @@
+# Minion
+
+A new project.
+
