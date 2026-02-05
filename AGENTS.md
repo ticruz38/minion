@@ -126,6 +126,18 @@ docker push ticruz38/minion:amd64
 4. Frontend exchanges code with backend at `/api/auth/callback`
 5. Backend polls `/api/auth/callback?state=xxx` for completion
 
+**API Response Format (when completed):**
+```json
+{
+  "status": "completed",
+  "userInfo": { "email": "...", "name": "..." },
+  "access_token": "ya29...",
+  "refresh_token": "1//0d...",
+  "expires_in": 3600
+}
+```
+**Note:** OAuth tokens are now returned in API responses so external bots/clients can use them directly.
+
 ### When to Update This File
 
 **MUST update AGENTS.md when:**
@@ -165,6 +177,7 @@ docker push ticruz38/minion:amd64
 
 ## Last Updated
 
-2025-02-05 - Added 3D character selector, mobile responsiveness, GitHub Actions
+2025-02-05 - Added 3D character selector, mobile responsiveness, GitHub Actions  
+2025-02-05 - OAuth tokens now returned in API responses for external bot integration
 
 **Maintainers:** Update this date when modifying this file.
