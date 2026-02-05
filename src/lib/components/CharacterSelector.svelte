@@ -15,7 +15,7 @@
   const minions: Minion[] = [
     {
       id: 'accountant',
-      name: 'The Accountant',
+      name: 'Bean Counter Benny',
       tagline: 'Your books, perfectly balanced',
       description: 'Handles invoicing, expense tracking, tax prep, and financial reports.',
       features: ['Invoicing', 'Expense Tracking', 'Tax Reports', 'Bank Reconciliation'],
@@ -28,7 +28,7 @@
     },
     {
       id: 'realtor',
-      name: 'The Real Estate Scout',
+      name: 'Open House Owen',
       tagline: 'Never miss a good deal',
       description: 'Scans listings 24/7, alerts you to opportunities, tracks market trends.',
       features: ['Listing Alerts', 'Market Analysis', 'Property Database', 'Lead Tracking'],
@@ -41,7 +41,7 @@
     },
     {
       id: 'analyst',
-      name: 'The Financial Analyst',
+      name: 'Bear Market Barry',
       tagline: 'Data-driven decisions',
       description: 'Monitors markets, analyzes portfolios, generates reports.',
       features: ['Portfolio Tracking', 'Market Alerts', 'Risk Analysis', 'Report Generation'],
@@ -54,7 +54,7 @@
     },
     {
       id: 'restaurant',
-      name: 'The Restaurant Secretary',
+      name: 'Sergio',
       tagline: 'Your virtual maître d\'',
       description: 'Takes reservations, manages orders, coordinates with kitchen.',
       features: ['Table Booking', 'Order Taking', 'Customer Chat', 'Staff Coordination'],
@@ -67,7 +67,7 @@
     },
     {
       id: 'scheduler',
-      name: 'The Schedule Master',
+      name: 'Time Lord Terry',
       tagline: 'Your calendar, optimized',
       description: 'Manages appointments, finds optimal meeting times, sends reminders.',
       features: ['Smart Scheduling', 'Conflict Resolution', 'Auto Reminders', 'Time Blocking'],
@@ -80,7 +80,7 @@
     },
     {
       id: 'support',
-      name: 'The Support Agent',
+      name: 'Ticket Tim',
       tagline: 'Always on, always helpful',
       description: 'Answers customer queries, routes complex issues, maintains FAQs.',
       features: ['24/7 Response', 'Ticket Routing', 'FAQ Management', 'Escalation'],

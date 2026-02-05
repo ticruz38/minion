@@ -163,6 +163,25 @@ docker push ticruz38/minion:amd64
 2. Add profession shape/accessory mapping in `MinionAvatar3D.svelte`
 3. Update this file's documentation
 
+## Current Minions (with funny names!)
+
+| ID | Name | Role | Color |
+|----|------|------|-------|
+| accountant | **Bean Counter Benny** | Accounting & bookkeeping | `#10b981` (Green) |
+| realtor | **Open House Owen** | Real estate scouting | `#f59e0b` (Orange) |
+| analyst | **Bear Market Barry** | Financial analysis | `#8b5cf6` (Purple) |
+| restaurant | **Sergio** | Restaurant management | `#ef4444` (Red) |
+| scheduler | **Time Lord Terry** | Calendar & scheduling | `#06b6d4` (Cyan) |
+| support | **Ticket Tim** | Customer support | `#ec4899` (Pink) |
+
+**Naming convention:** Each minion has a funny, memorable name related to their function:
+- Benny: Bean counter = accountant stereotype
+- Owen: Always at open houses
+- Barry: Bear market = Wall Street lingo
+- Sergio: Classic maître d' name
+- Terry: Time Lord (Dr. Who reference) for scheduling
+- Tim: Takes support tickets
+
 ### Update 3D avatar
 1. Edit `MinionAvatar3D.svelte`
 2. Ensure proper disposal in cleanup
