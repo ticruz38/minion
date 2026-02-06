@@ -72,8 +72,8 @@
         "Verify in browser using dev-browser skill - screenshots: masked state, revealed state, error state"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented Step 2 with password-masked token input, show/hide toggle, @BotFather help link, real-time validation with pattern /^\\d+:[a-zA-Z0-9_-]+$/"
     },
     {
       "id": "US-005",

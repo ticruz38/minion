@@ -89,6 +89,8 @@ Started: Fri Feb  6 04:21:26 PM CET 2026
 - **Form validation**: Use reactive statements (`$:`) for real-time validation with immediate visual feedback
 - **Input state classes**: Use conditional CSS classes (`.error`, `.valid`) on wrapper elements for styling different input states
 - **Character counters**: Always show max limit and current count, highlight when approaching limit
+- **Password visibility toggle**: Use a button with eye/eye-off icons inside the input wrapper, positioned absolute right
+- **Help boxes**: Use styled info boxes with icon, title, and descriptive text for contextual guidance
 
 ---
 
@@ -179,4 +181,36 @@ Started: Fri Feb  6 04:21:26 PM CET 2026
 - Svelte's `in:fade` transition on step content provides smooth step transitions for future steps
 - Form validation feedback should be immediate - validate on input, not just on blur
 - The `botNameTouched` flag prevents showing errors immediately on page load
+---
+---
+
+## 2026-02-06T16:42:00+01:00 - US-004
+- Implemented Step 2 "Telegram Configuration" in VMCreationModal.svelte
+- Added password-masked input for Telegram bot token with show/hide toggle button
+- Created help box with @BotFather link and instructions for creating a bot
+- Implemented real-time validation for token format: `digits:alphanumeric` pattern (e.g., `123456789:ABCdefGHIjklMNOpqrsTUVwxyz`)
+- Added visual feedback states: error (red border), valid (green border), masked (dots), revealed (plain text)
+- Next button disabled until valid token format is entered
+- Back button correctly returns to Step 1
+- Token validation uses regex: `/^\d+:[a-zA-Z0-9_-]+$/`
+- Typecheck passes (0 errors)
+- Build passes
+- Browser verification passed with Playwright:
+  - Desktop: Step 2 initial state, error state, valid masked state, revealed state all working correctly
+  - Mobile (375x812): Full-screen modal with Step 2 content working correctly
+- Screenshots captured:
+  - `/tmp/us-004-step2-initial.png` - Empty masked input with placeholder
+  - `/tmp/us-004-step2-error.png` - Invalid token error message
+  - `/tmp/us-004-step2-valid-masked.png` - Valid token with green border, Next enabled
+  - `/tmp/us-004-step2-revealed.png` - Token visible in plain text
+  - `/tmp/us-004-step2-mobile.png` - Mobile layout with help box
+
+**Learnings for future iterations:**
+- Password visibility toggle pattern: Button with eye/eye-off SVG icons, absolutely positioned inside input wrapper
+- Help box pattern: Use a styled container with icon, title, and descriptive text with links
+- For sensitive inputs (tokens, passwords), provide both masked and visible modes with a toggle
+- Input type switching: `type={showToken ? 'text' : 'password'}` with reactive state
+- Token format validation: Use specific regex patterns and provide helpful error messages with examples
+- The visibility toggle button should have `type="button"` to prevent form submission
+- CSS: Use `padding-right` on input to make room for the toggle button
 ---
