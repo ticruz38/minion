@@ -110,258 +110,238 @@
 │ - Keep CI green                                                                                              │
 │ - Read the Codebase Patterns section in progress.txt before starting                                         │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-• Let me start by reading the PRD file and the progress log to understand what needs to be done.
+• Let me start by reading the PRD file and progress log to understand what needs to be done.
 • Used ReadFile (prd.json)
 • Used ReadFile (progress.txt)
-• Looking at the PRD, I can see:
-
-  • US-001 and US-002 are already completed (passes: true)
-  • The next highest priority story is US-003: Build Step 1 - Name Your Bot (priority: 3, passes: false)
-
-  Let me check the current branch and the existing VMCreationModal component to understand what needs to be buil
-  t.
-• Let me check the current branch and examine the existing modal component to understand the current state:
-• Used Shell (git branch --show-current && git status)
+• I've finished US-001 through US-003. According to the plan, US-004 is the next item on the list. Hmm, I wonder
+  if the branch ralph/vm-creation-modal has already been created or if I'm supposed to handle that setup. Wait,
+  instead of jumping into the code, I should verify the current repository state. If I'm not on the correct bran
+  ch, any changes I make might be misplaced. Let me check the current branch name and list all available branche
+  s. This will confirm whether I need to switch to the task-specific branch or create it from the main branch.
+• Let me check the current branch and continue with the highest priority incomplete story (US-004):
+• Used Shell (cd /root/code/minion && g...v-parse --abbrev-ref HEAD)
+• I'm on the right branch ralph/vm-creation-modal. Now let me look at the existing VMCreationModal.svelte to und
+  erstand its current structure before implementing Step 2.
+• I'm on the correct branch. Let me read the current VMCreationModal.svelte to understand the structure:
 • Used ReadFile (src/lib/components/VMCreationModal.svelte)
-• Okay, I've analyzed the PRD and the current state of the modal. US-003 is the priority now: building Step 1 fo
-  r bot naming. The requirements are quite specific: a 3-30 character alphanumeric/hyphen input with real-time v
-  alidation and a progress indicator.
+• I understand the current state of VMCreationModal.svelte. Step 1 (Name Your Bot) is already implemented with a
+  robust validation system. Step 2 (Telegram Configuration) is currently a placeholder. To implement Step 2 prop
+  erly, I need to satisfy several UI requirements: a masked input for the token, a toggle to show/hide it, and v
+  alidation logic. The validation logic specifically needs to check for the pattern of digits followed by an alp
+  hanumeric string.
 
-  Wait, before I dive into the code, I need to ensure my workspace is organized. Since this is a distinct user s
-  tory, I should formally document my progress. Actually, let me update my todo list first to reflect that US-00
-  3 is now in progress. This will keep the workflow structured as I transition from the 'Name Your Bot' design p
-  hase to the actual implementation of the validation logic.
-• Now I understand the task. I need to implement US-003: Build Step 1 - Name Your Bot. Let me set up my todo lis
-  t and start implementing:
-• Used SetTodoList
-  • Implement Step 1 - Name Your Bot in VMCreationModal ←
-  • Add real-time validation for bot name (3-30 chars, alphanumeric + hyphen)
-  • Add step indicator showing 'Step 1 of 4'
-  • Typecheck and build verification
-  • Browser verification with dev-browser skill
-  • Update progress.txt and commit
-• Let me now implement Step 1 in the VMCreationModal component. I need to:
+  Hmm, let's look at the structure. The component uses reactive statements ($:) to manage state for currentStep
+  and formData. I should extend formData to include telegramToken and add state variables like showToken and tok
+  enError.
 
-  1. Add a currentStep state to track which step we're on
-  2. Create Step 1 content with:
-    • Display selected Minion avatar and name at top
-    • Single text input for bot name with 3-30 character limit
-    • Validate alphanumeric + hyphen only format
-    • Real-time validation showing error for invalid format
-    • Next button disabled until valid name entered
-    • Step indicator showing "Step 1 of 4"
-  3. Add validation logic
-  4. Update the step indicator to be dynamic
+  Wait, I need to be careful with the regex for the Telegram token. A standard bot token usually follows the for
+  mat 123456789:ABCdefGHIjklMNOpqrsTUVwxyz. I should ensure the regex captures this correctly to provide real-ti
+  me feedback to the user.
 
-  Let me update the VMCreationModal.svelte file:
-• Let me check the current +page.svelte to see how the modal is integrated:
-• Used ReadFile (src/routes/+page.svelte)
-• Now I have a good understanding of the current setup. Let me implement US-003: Build Step 1 - Name Your Bot. I
-  need to update the VMCreationModal.svelte to add:
+  But wait—before I start adding these variables and the new UI block, I should look at how the steps are render
+  ed. The current implementation uses an {#if currentStep === 1} block. I will replace the placeholder for step
+  2 with a similar block containing the Telegram-specific inputs.
 
-  1. A currentStep state variable (1-4)
-  2. Step 1 content with:
-    • Display selected Minion avatar and name at top
-    • Single text input for bot name with 3-30 character limit
-    • Validate alphanumeric + hyphen only format
-    • Real-time validation showing error for invalid format
-    • Next button disabled until valid name entered
-    • Step indicator showing "Step 1 of 4"
+  Actually, looking at the existing code, there's a consistent pattern for form elements. I'll follow that to ma
+  intain the aesthetic. I need to add the script logic for validation and the UI for the input field. The UI sho
+  uld include the show/hide toggle button integrated into the input wrapper.
 
-  Let me rewrite the VMCreationModal.svelte with these features:
-• Now I'll implement Step 1 in the VMCreationModal. Let me update the component with the step system and the nam
-  e input form:
-• Used WriteFile (src/lib/components/VMCreationModal.svelte)
-• Now let me update my todo list and run the typecheck to make sure everything compiles correctly.
-• Used SetTodoList
-  • Implement Step 1 - Name Your Bot in VMCreationModal
-  • Add real-time validation for bot name (3-30 chars, alphanumeric + hyphen)
-  • Add step indicator showing 'Step 1 of 4'
-  • Typecheck and build verification ←
-  • Browser verification with dev-browser skill
-  • Update progress.txt and commit
-• Used Shell (cd /root/code/minion && npm run check 2>&1)
-• Typecheck passes (0 errors). The warning is pre-existing and not related to my changes. Now let me verify the
-  build also passes:
-• Typecheck passes! Now let me verify the build:
-• Used Shell (cd /root/code/minion && n...run build 2>&1 | tail -30)
-• Build passes. Now I need to verify it works in the browser using the dev-browser skill. Let me start the dev s
-  erver and test:
-• Build passes! Now let me verify it in the browser:
-• Used SetTodoList
-  • Implement Step 1 - Name Your Bot in VMCreationModal
-  • Add real-time validation for bot name (3-30 chars, alphanumeric + hyphen)
-  • Add step indicator showing 'Step 1 of 4'
-  • Typecheck and build verification
-  • Browser verification with dev-browser skill ←
-  • Update progress.txt and commit
+  The most direct path is to replace the placeholder section with the full implementation of Step 2. This includ
+  es the script-level state management and the HTML/template structure for the Telegram token input. I'll make s
+  ure the transition effects (in:fade) are preserved for a smooth user experience when navigating between steps.
+  I'll now apply these changes to the file.
+• Now I'll implement Step 2 - Telegram Configuration. I need to add:
+
+  1. State variables for the token and visibility toggle
+  2. Token validation logic
+  3. The Step 2 UI content
+• Used StrReplaceFile (src/lib/components/VMCreationModal.svelte)
+• Now I need to add the CSS styles for the new elements (visibility toggle, help box). Let me add those styles t
+  o the style section.
+• Now let me add the CSS styles for the new elements (visibility toggle, help box):
+• Used StrReplaceFile (src/lib/components/VMCreationModal.svelte)
+• Good. Now let me run the typecheck to make sure everything compiles correctly.
+• Now let me run the typecheck to ensure the code compiles:
+• Used Shell (cd /root/code/minion && n...run check 2>&1 | head -50)
+• Typecheck passes (0 errors, 1 pre-existing warning that's not related to our changes). Now let me run the buil
+  d to ensure everything works:
+• Typecheck passes. Now let me verify with the build command:
+• Used Shell (cd /root/code/minion && n...run build 2>&1 | tail -20)
+• Build passes. Now I need to verify the UI in the browser using the dev-browser skill. Let me read the skill do
+  cumentation first.
+• Build passes. Now let me load the dev-browser skill to verify the UI in browser:
 • Used ReadFile (/root/.config/agents/skil...playwright-skill/SKILL.md)
-• Now let me use the playwright skill to verify the Step 1 implementation. First, I'll detect dev servers, then
-  write a test script to take screenshots of the different states.
-• Let me start the dev server and test Step 1 in the browser:
-• Used Shell (cd /root/code/minion && n...ho "Server not ready yet")
-  Killed by timeout (15s)
-• The dev server is running on port 5174. Now let me write a Playwright test script to verify the Step 1 impleme
-  ntation with screenshots.
-• Server is running on port 5174. Now let me write a test script to verify Step 1:
-• Used WriteFile (/tmp/playwright-test-us003.js)
-• Now let me run the test script:
-• Used Shell (cd /root/.config/agents/s...wright-test-us003.js 2>&1)
+• Now I need to use the playwright skill to test Step 2. Let me first detect the dev server, then write a test s
+  cript to verify the UI.
+• Let me detect the dev server and then create a test script:
+• Used Shell (cd /root/.config/agents/s....log(JSON.stringify(s)))")
+• There are 3 servers running. Let me test port 3000 first. I'll write a script to:
+
+  1. Open the page
+  2. Click HIRE on a minion to open the modal
+  3. Fill in Step 1
+  4. Navigate to Step 2
+  5. Take screenshots of masked state, revealed state, and error state
+• Used WriteFile (/tmp/playwright-test-step2.js)
+• Now let me run the test script.
+• Used Shell (cd /root/.config/agents/s.../playwright-test-step2.js)
   Failed with exit code: 1
-• The headed browser doesn't work without X server. Let me use headless mode instead and take screenshots to ver
-  ify.
-• Need to use headless mode. Let me update the script:
-• Used WriteFile (/tmp/playwright-test-us003.js)
-• Now let me run the updated script with headless mode:
-• Used Shell (cd /root/.config/agents/s...wright-test-us003.js 2>&1)
-  Failed with exit code: 1
-• The selector for the hire button might be different. Let me check the CharacterSelector component to see what
-  class/selector the hire button uses.
-• Let me check the CharacterSelector to find the correct button selector:
-• Used Grep (hire|HIRE|Hire)
-• The class is hire-button, not hire-btn. Let me update the script:
-• Used StrReplaceFile (/tmp/playwright-test-us003.js)
-• Now let me run the test again:
-• Used Shell (cd /root/.config/agents/s...wright-test-us003.js 2>&1)
-• All tests pass! The Step 1 implementation is working correctly:
+• I see - there's no X server running. I need to use headless mode for the browser testing. Let me update the sc
+  ript to use headless: true.
+• I need to run in headless mode since there's no X server. Let me update the script:
+• Used StrReplaceFile (/tmp/playwright-test-step2.js)
+• Now let me run the test again.
+• Used Shell (cd /root/.config/agents/s.../playwright-test-step2.js)
+• It seems the hire button locator is not working. Let me check the page structure. The .hire-button class might
+  not be the correct selector. Let me update the script to use a more robust approach - wait for the page to ful
+  ly load and then check what elements are available.
+• Let me fix the test script with better selectors:
+• Used WriteFile (/tmp/playwright-test-step2.js)
+• Let me run the test again with the updated script.
+• Used Shell (cd /root/.config/agents/s.../playwright-test-step2.js)
+• Let me check what the page looks like by examining the screenshot and the actual page structure. The issue is
+  that the page content is not loading properly. Let me check the static files and the page structure.
+• Let me check what's happening with the page:
+• Used ReadMediaFile (/tmp/error-screenshot.png)
+• I see - the page being served on port 3000 is not the Minion app, it's a different app called "Nuts". Let me c
+  heck port 3001 or 8080 to find the correct server.
+• I see - port 3000 is serving a different app. Let me check the other ports:
+• Used Shell (curl -s http://localhost:3001 | head -20)
+• Port 3001 is RTL (another app). Let me check port 8080.
+• Used Shell (curl -s http://localhost:8080 | head -30)
+• Port 8080 redirects. Let me try to find the minion app server or start the dev server for the minion project.
+• Let me start the dev server for the minion project:
+• Used Shell (cd /root/code/minion && n...localhost:5173 | head -20)
+  Killed by timeout (60s)
+• Let me try a shorter timeout and check what's happening.
+• Used Shell (cd /root/code/minion && t... npm run dev 2>&1 || true)
+• The dev server started on port 5175. Let me update the test script to use that port.
+• Used StrReplaceFile (/tmp/playwright-test-step2.js)
+• Now let me run the test script again.
+• Used Shell (cd /root/.config/agents/s.../playwright-test-step2.js)
+• The dev server might have stopped. Let me start it again and run the test.
+• Used Shell (cd /root/code/minion && n...localhost:5175 | head -10)
+  Killed by timeout (60s)
+• The server is running now. Let me run the test again.
+• Used Shell (cd /root/.config/agents/s.../playwright-test-step2.js)
+• There's an ambiguity in the selector - there are two .btn-primary buttons on the page. Let me fix the script t
+  o use a more specific selector.
+• Let me fix the selector issue:
+• Used StrReplaceFile (/tmp/playwright-test-step2.js)
+• Now let me run the test again.
+• Used Shell (cd /root/.config/agents/s.../playwright-test-step2.js)
+• All tests passed! Let me view the screenshots to verify they look correct.
+• All tests passed. Let me verify the screenshots:
+• Used ReadMediaFile (/tmp/us-004-step2-initial.png)
+• Used ReadMediaFile (/tmp/us-004-step2-error.png)
+• Used ReadMediaFile (/tmp/us-004-step2-valid-masked.png)
+• The screenshots look good! I can see:
 
-  • Next button is disabled with empty input
-  • Error messages appear for invalid inputs (too short, special chars)
-  • Character count works
-  • Valid name enables the Next button
-  • Step indicator shows "Step 1 of 4"
-  • Mobile viewport works
+  1. Step 2 initial state - empty token input with placeholder
+  2. Step 2 error state - red border with error message about invalid token format
+  3. Step 2 valid state - green border, token masked, Next button enabled
 
-  Let me now read the screenshots to verify they look correct, then update the progress.txt and commit.
-• All tests pass! Let me verify the screenshots look correct:
-• Used ReadMediaFile (/tmp/us003-02-modal-open-empty.png)
-• Used ReadMediaFile (/tmp/us003-04-invalid-chars.png)
-• Used ReadMediaFile (/tmp/us003-06-valid-name.png)
-• Used ReadMediaFile (/tmp/us003-07-mobile.png)
-• Hmm, looking at the test results and the screenshots, the Step 1 implementation is looking solid. The modal co
-  rrectly displays Benny's avatar and the "AI Assistant" label. The validation logic for the bot name—handling e
-  mpty inputs, character limits, and special characters—is triggering the error states exactly as expected. The
-  Next button logic and the Step 1 of 4 indicator are also fully operational.
+  Let me also check the revealed state screenshot.
+• Used ReadMediaFile (/tmp/us-004-step2-revealed.png)
+• Used ReadMediaFile (/tmp/us-004-step2-mobile.png)
+• All screenshots look great:
 
-  Wait, I should double-check the mobile layout... Yes, the 375x812 screenshot confirms the responsive design is
-  holding up perfectly. Since I've verified the UI against all the requirements in the PRD and the code is stabl
-  e, I'm ready to move to the next phase.
+  1. Initial state: Shows the empty token input with placeholder text "123456789:ABCdefGHIjklMNOpqrsTUVwxyz", th
+     elp box with BotFather link, Back and Next buttons (Next disabled)
+  2. Error state: Shows red border on input with error message about invalid token format, Next button still dis
+     ed
+  3. Valid masked state: Shows masked token (dots), green border, Next button enabled (glowing green)
+  4. Revealed state: Shows the token in plain text "123456789:ABCdefGHIjklMNOpqrsTUVwxyz" and the eye-off icon
+  5. Mobile state: Shows full-screen modal on mobile viewport with:
+    • Minion avatar at top
+    • Step 2 content
+    • Masked token input
+    • Help box with BotFather link
+    • Step indicator showing "STEP 2 OF 4"
+    • Bottom-fixed Back/Next buttons
 
-  Actually, before I commit these changes, I need to ensure my internal progress tracking is up to date. I've co
-  mpleted the implementation and validation, so I should mark these tasks as finished in my todo list. This will
-  provide a clear record of the work done on the VMCreationModal before I finalize the commit. Let me update the
-  status of these items now.
-• Excellent! All screenshots look great:
+  All acceptance criteria are met:
 
-  • ✅ Empty input with Next button disabled
-  • ✅ Error state for invalid characters (red border, error message)
-  • ✅ Valid name state (green border, checkmark, enabled Next button)
-  • ✅ Mobile responsive layout looks good
+  • ✅ Password-masked input for Telegram bot token
+  • ✅ Show/hide toggle button for token visibility
+  • ✅ Help text with link to @BotFather instructions
+  • ✅ Validate token format matches pattern: digits:alphanumeric
+  • ✅ Back button returns to Step 1, Next proceeds to Step 3
+  • ✅ Next button disabled until valid token format entered
+  • ✅ Typecheck passes
+  • ✅ Browser verification passed with screenshots
 
-  Now let me update progress.txt and commit:
-• Used SetTodoList
-  • Implement Step 1 - Name Your Bot in VMCreationModal
-  • Add real-time validation for bot name (3-30 chars, alphanumeric + hyphen)
-  • Add step indicator showing 'Step 1 of 4'
-  • Typecheck and build verification
-  • Browser verification with dev-browser skill
-  • Update progress.txt and commit ←
-• Now let me update the progress.txt file:
-• Used WriteFile (progress.txt)
-• Now let me update the PRD to set passes: true for US-003:
+  Now I need to:
+
+  1. Commit the changes
+  2. Update the PRD
+  3. Update the progress.txt
+• All screenshots look great! The implementation is complete. Now let me commit the changes:
+• Used Shell (cd /root/code/minion && g...odal.svelte && git status)
+• Let me check if there are any log files I need to commit or if I should add them to gitignore. Actually, based
+  on the instructions, I should only commit the necessary code changes. Let me commit and then update the PRD an
+  d progress.txt.
+• Used Shell (cd /root/code/minion && g...- Telegram Configuration")
+• Commit is done. Now I need to update the PRD to set passes: true for US-004.
+• Now let me update the PRD to mark US-004 as complete:
 • Used StrReplaceFile (prd.json)
-• Now let me commit the changes:
-• Now let me commit the changes:
-• Used Shell (cd /root/code/minion && git add -A && git status)
-• Good. Let me commit:
-• Used Shell (cd /root/code/minion && g...p 1 - Name Your Bot" 2>&1)
-• Commit successful. Let me update the todo list and verify everything is done:
-• Used SetTodoList
-  • Implement Step 1 - Name Your Bot in VMCreationModal
-  • Add real-time validation for bot name (3-30 chars, alphanumeric + hyphen)
-  • Add step indicator showing 'Step 1 of 4'
-  • Typecheck and build verification
-  • Browser verification with dev-browser skill
-  • Update progress.txt and commit
-• Let me verify the PRD status and confirm that US-003 is now marked as complete:
-• Used Shell (cd /root/code/minion && g...'"id": "US-003"' prd.json)
-• Let me also check the passes field:
-• Used Shell (cd /root/code/minion && g... grep -E "(passes|notes)")
-  Failed with exit code: 1
-• Let me try a different command:
-• Used Shell (cd /root/code/minion && c...\"notes: {s['notes']}\")")
-• US-003 is now complete with passes: true. Let me provide a summary of what was done:
+• Now let me update the progress.txt with the new entry for US-004.
+• Now let me update progress.txt with the progress report:
+• Used StrReplaceFile (progress.txt)
+• Now let me add the progress entry for US-004 at the end of the file.
+• Used WriteFile (progress.txt)
+• I've completed the implementation. Let me also check if there are any AGENTS.md files that need updating in th
+  e components directory. Based on the instructions, I should update AGENTS.md if I discovered reusable patterns
+  . Let me check if there's an AGENTS.md in the components directory.
+• Let me check if there's an AGENTS.md in the components directory that should be updated:
+• Used Shell (find /root/code/minion/sr...-name "AGENTS.md" -type f)
+• There's no AGENTS.md in the src directory. The only AGENTS.md is at the root level, which I've already referen
+  ced. The patterns I've discovered are already documented in progress.txt, and they're specific to the form/mod
+  al patterns which are documented there.
 
-  Summary
+  Let me verify the PRD update is correct and check the final state of the progress.txt.
+• Let me verify all the changes are in place:
+• Used Shell (cd /root/code/minion && g... diff prd.json | head -30)
+• The PRD has been updated. Let me verify the git status and make sure everything is committed.
+• Used Shell (cd /root/code/minion && g...rogress.txt && git status)
+• The log files are just generated logs and don't need to be committed. Let me commit the PRD and progress.txt u
+  pdates.
+• Used Shell (cd /root/code/minion && g... and progress for US-004")
+• I've completed US-004. Let me run the typecheck one more time to make sure everything is still good after my c
+  hanges.
+• Let me verify the final typecheck:
+• Used Shell (cd /root/code/minion && n...run check 2>&1 | tail -15)
+• All checks pass. US-004 is complete. Let me provide a summary of what was done.
+• US-004 is now complete. Here's a summary:
 
-  I successfully implemented US-003: Build Step 1 - Name Your Bot. Here's what was done:
+  Completed: US-004 - Build Step 2 - Telegram Configuration
 
-  Changes Made:
+  Implementation Summary:
 
-  1. Updated VMCreationModal.svelte with:
-    • Added currentStep state tracking (1-4)
-    • Step 1 content with:
-      • Minion avatar and info display at top
-      • Bot name input field with 3-30 character limit
-      • Real-time validation for alphanumeric + hyphen format
-      • Visual feedback: error state (red border), valid state (green border + checkmark)
-      • Character counter with warning when near limit
-      • Next button disabled until valid name entered
-      • Step indicator showing "Step 1 of 4" with progress dots
-      • Back button support for future steps
+  • Password-masked input for Telegram bot token with dynamic type switching (password/text)
+  • Show/hide toggle button with eye/eye-off icons positioned inside the input
+  • Help box with @BotFather link and /newbot command instructions
+  • Real-time validation using regex pattern /^\d+:[a-zA-Z0-9_-]+$/
+  • Visual feedback: Error state (red border), Valid state (green border)
+  • Navigation: Back button returns to Step 1, Next proceeds to Step 3
+  • Next button disabled until valid token format is entered
+
+  Files Changed:
+
+  • src/lib/components/VMCreationModal.svelte - Added Step 2 implementation
 
   Quality Checks:
 
-  • ✅ Typecheck passes (0 errors)
+  • ✅ Typecheck passes (0 errors, 1 pre-existing warning)
   • ✅ Build passes
-  • ✅ Browser verification with Playwright:
-    • Empty input: Next button disabled
-    • Invalid name: Error message displayed
-    • Valid name: Green checkmark, Next button enabled
-    • Step indicator shows "Step 1 of 4"
-    • Mobile responsive (375x812)
+  • ✅ Browser verification passed with Playwright screenshots:
+    • Step 2 initial (masked, empty)
+    • Step 2 error (invalid token)
+    • Step 2 valid (masked)
+    • Step 2 revealed (plain text visible)
+    • Step 2 mobile (375x812)
 
-  Committed:
+  Commits:
 
-  • Commit: feat: US-003 - Build Step 1 - Name Your Bot
-  • PRD updated: passes: true for US-003
-  • Progress logged in progress.txt
-
-  The next story to implement would be US-004: Build Step 2 - Telegram Configuration.
-• Summary
-
-  I have successfully completed US-003: Build Step 1 - Name Your Bot.
-
-  What was implemented:
-
-  1. Step 1 Content in VMCreationModal.svelte:
-    • Selected Minion avatar and name displayed at top
-    • Bot name input field with 3-30 character limit
-    • Real-time validation for alphanumeric + hyphen only format
-    • Visual feedback states: error (red border), valid (green border + checkmark)
-    • Character counter with warning when approaching limit
-    • Next button disabled until valid name entered
-    • Step indicator showing "Step 1 of 4" with visual progress dots
-    • Back button support for navigation
-  2. Validation behavior:
-    • Empty input → No error, Next disabled
-    • Too short (<3 chars) → Error message, Next disabled
-    • Invalid chars → Error message with rule explanation, Next disabled
-    • Too long → Truncated by maxlength attribute
-    • Valid → Green checkmark, Next enabled
-
-  Quality verification:
-
-  • ✅ Typecheck passes (0 errors)
-  • ✅ Build passes
-  • ✅ Browser verification with Playwright screenshots:
-    • Desktop: Empty input, invalid name error, valid name state
-    • Mobile (375x812): Full-screen layout working correctly
-
-  Committed:
-
-  • Commit: 4633fef feat: US-003 - Build Step 1 - Name Your Bot
-  • PRD updated: passes: true for US-003
-  • Progress logged in progress.txt
-
-  The next story to work on is US-004: Build Step 2 - Telegram Configuration (priority 4).
+  1. feat: US-004 - Build Step 2 - Telegram Configuration
+  2. docs: Update PRD and progress for US-004

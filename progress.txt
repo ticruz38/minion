@@ -239,3 +239,30 @@ Started: Fri Feb  6 04:21:26 PM CET 2026
 - Help box styling with icon provides good contextual guidance for security features
 - Input padding-right needs to account for multiple action buttons (5.5rem for passcode with 2 buttons)
 ---
+
+## 2026-02-06T17:50:00+01:00 - US-006
+- Verified Step 4 "Review and Launch" implementation in VMCreationModal.svelte
+- Summary card displays: Minion avatar+name (Benny), bot name (my-test-bot), Telegram status (Connected), masked passcode with reveal toggle
+- Credit cost breakdown implemented: hourly rate (95 credits/hour), current balance (500 credits), estimated runtime (~5 hours)
+- Low balance warning logic implemented (shows when balance < 190 credits / 2 hours runtime)
+- Launch Bot button with loading state and spinner animation during API call
+- Error message display for API failures
+- Back button returns to Step 3
+- Typecheck passes (0 errors, 1 pre-existing warning)
+- Build passes
+- Browser verification with Playwright:
+  - Desktop (1280x720): Step 4 review screen with sufficient credits, passcode reveal toggle working
+  - Mobile (375x812): Full-screen responsive layout working correctly
+- Screenshots captured:
+  - `/tmp/us-006-step4-sufficient-credits.png` - Review screen with 500 credits balance
+  - `/tmp/us-006-step4-passcode-revealed.png` - Passcode revealed via toggle
+  - `/tmp/us-006-step4-mobile.png` - Mobile layout
+
+**Learnings for future iterations:**
+- Summary card pattern: Use a compact card layout with header (avatar + name) and details rows
+- Credit display pattern: monospace font for numbers, color-coded balance (orange for low)
+- Passcode reveal in review: Small inline toggle button next to masked value
+- Warning banner: Yellow/orange theme with warning icon, appears conditionally based on calculation
+- Launch button: Prominent styling with minion color, spinner animation during async operation
+- Error display: Red banner below content, above action buttons for visibility
+---

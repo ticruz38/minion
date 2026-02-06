@@ -1,0 +1,244 @@
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ # Ralph Agent Instructions                                                   │
+│                                                                              │
+│ You are an autonomous coding agent working on a software project.            │
+│                                                                              │
+│ ## Your Task                                                                 │
+│                                                                              │
+│ 1. Read the PRD at `prd.json` (in the same directory as this file)           │
+│ 2. Read the progress log at `progress.txt` (check Codebase Patterns section  │
+│ first)                                                                       │
+│ 3. Check you're on the correct branch from PRD `branchName`. If not, check i │
+│ t out or create from main.                                                   │
+│ 4. Pick the **highest priority** user story where `passes: false`            │
+│ 5. Implement that single user story                                          │
+│ 6. Run quality checks (e.g., typecheck, lint, test - use whatever your proje │
+│ ct requires)                                                                 │
+│ 7. Update AGENTS.md files if you discover reusable patterns (see below)      │
+│ 8. If checks pass, commit ALL changes with message: `feat: [Story ID] - [Sto │
+│ ry Title]`                                                                   │
+│ 9. Update the PRD to set `passes: true` for the completed story              │
+│ 10. Append your progress to `progress.txt`                                   │
+│                                                                              │
+│ ## Progress Report Format                                                    │
+│                                                                              │
+│ APPEND to progress.txt (never replace, always append):                       │
+│ ```                                                                          │
+│ ## [Date/Time] - [Story ID]                                                  │
+│ - What was implemented                                                       │
+│ - Files changed                                                              │
+│ - **Learnings for future iterations:**                                       │
+│   - Patterns discovered (e.g., "this codebase uses X for Y")                 │
+│   - Gotchas encountered (e.g., "don't forget to update Z when changing W")   │
+│   - Useful context (e.g., "the evaluation panel is in component X")          │
+│ ---                                                                          │
+│ ```                                                                          │
+│                                                                              │
+│ The learnings section is critical - it helps future iterations avoid repeati │
+│ ng mistakes and understand the codebase better.                              │
+│                                                                              │
+│ ## Consolidate Patterns                                                      │
+│                                                                              │
+│ If you discover a **reusable pattern** that future iterations should know, a │
+│ dd it to the `## Codebase Patterns` section at the TOP of progress.txt (crea │
+│ te it if it doesn't exist). This section should consolidate the most importa │
+│ nt learnings:                                                                │
+│                                                                              │
+│ ```                                                                          │
+│ ## Codebase Patterns                                                         │
+│ - Example: Use `sql<number>` template for aggregations                       │
+│ - Example: Always use `IF NOT EXISTS` for migrations                         │
+│ - Example: Export types from actions.ts for UI components                    │
+│ ```                                                                          │
+│                                                                              │
+│ Only add patterns that are **general and reusable**, not story-specific deta │
+│ ils.                                                                         │
+│                                                                              │
+│ ## Update AGENTS.md Files                                                    │
+│                                                                              │
+│ Before committing, check if any edited files have learnings worth preserving │
+│ in nearby AGENTS.md files:                                                   │
+│                                                                              │
+│ 1. **Identify directories with edited files** - Look at which directories yo │
+│ u modified                                                                   │
+│ 2. **Check for existing AGENTS.md** - Look for AGENTS.md in those directorie │
+│ s or parent directories                                                      │
+│ 3. **Add valuable learnings** - If you discovered something future developer │
+│ s/agents should know:                                                        │
+│    - API patterns or conventions specific to that module                     │
+│    - Gotchas or non-obvious requirements                                     │
+│    - Dependencies between files                                              │
+│    - Testing approaches for that area                                        │
+│    - Configuration or environment requirements                               │
+│                                                                              │
+│ **Examples of good AGENTS.md additions:**                                    │
+│ - "When modifying X, also update Y to keep them in sync"                     │
+│ - "This module uses pattern Z for all API calls"                             │
+│ - "Tests require the dev server running on PORT 3000"                        │
+│ - "Field names must match the template exactly"                              │
+│                                                                              │
+│ **Do NOT add:**                                                              │
+│ - Story-specific implementation details                                      │
+│ - Temporary debugging notes                                                  │
+│ - Information already in progress.txt                                        │
+│                                                                              │
+│ Only update AGENTS.md if you have **genuinely reusable knowledge** that woul │
+│ d help future work in that directory.                                        │
+│                                                                              │
+│ ## Quality Requirements                                                      │
+│                                                                              │
+│ - ALL commits must pass your project's quality checks (typecheck, lint, test │
+│ )                                                                            │
+│ - Do NOT commit broken code                                                  │
+│ - Keep changes focused and minimal                                           │
+│ - Follow existing code patterns                                              │
+│                                                                              │
+│ ## Browser Testing (Required for Frontend Stories)                           │
+│                                                                              │
+│ For any story that changes UI, you MUST verify it works in the browser:      │
+│                                                                              │
+│ 1. Load the `dev-browser` skill                                              │
+│ 2. Navigate to the relevant page                                             │
+│ 3. Verify the UI changes work as expected                                    │
+│ 4. Take a screenshot if helpful for the progress log                         │
+│                                                                              │
+│ A frontend story is NOT complete until browser verification passes.          │
+│                                                                              │
+│ ## Stop Condition                                                            │
+│                                                                              │
+│ After completing a user story, check if ALL stories have `passes: true`.     │
+│                                                                              │
+│ If ALL stories are complete and passing, reply with:                         │
+│ <promise>COMPLETE</promise>                                                  │
+│                                                                              │
+│ If there are still stories with `passes: false`, end your response normally  │
+│ (another iteration will pick up the next story).                             │
+│                                                                              │
+│ ## Important                                                                 │
+│                                                                              │
+│ - Work on ONE story per iteration                                            │
+│ - Commit frequently                                                          │
+│ - Keep CI green                                                              │
+│ - Read the Codebase Patterns section in progress.txt before starting         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+• Let me start by reading the PRD file and the progress log to understand what n
+  eeds to be done.
+• Used ReadFile (prd.json)
+• Used ReadFile (progress.txt)
+• Used Shell (cat /root/code/minion/.last-branch)
+• The project requirements are clearly outlined in the documents I've reviewed.
+  I've identified that US-006 is the priority story for this sprint. However, be
+  fore I can start implementation, I need to ensure my environment is properly c
+  onfigured. Wait, I'm currently on 'ralph/vm-creation-modal', which seems to be
+  the correct branch, but I should verify the branch name in the PRD against the
+  current state to avoid any conflicts. Actually, it's not just about the branch
+  name; I need to see the actual file structure to see where the components are
+  located. I'll start by checking the current git branch and listing the content
+  s of the Svelte source directory to get a clear picture of the workspace befor
+  e I begin coding.
+• Now I need to work on US-006 - Build Step 4 "Review and Launch". Let me first
+  check the current branch and review the existing code:
+• Used Shell (cd /root/code/minion && git branch --show-current)
+• Used Glob (src/lib/components/*.svelte)
+• Good, I'm on the correct branch. Let me read the VMCreationModal.svelte file t
+  o understand what's already implemented and add Step 4.
+• Good, I'm on the correct branch. Let me read the current VMCreationModal to un
+  derstand the existing structure:
+• Used ReadFile (src/lib/components/VMCreationModal.svelte)
+• Let me continue reading the file to see the rest of the styles.
+• Used ReadFile (src/lib/components/VMCreationModal.svelte)
+• I've examined the VMCreationModal.svelte component. It's a four-step form, but
+  step four is currently just a placeholder. To complete US-006, I need to build
+  out the "Review and Launch" interface.
+
+  Let's look at the requirements for this step:
+
+  • Summary card: Minion avatar+name, bot name, Telegram status, masked passcode
+    ith reveal toggle.
+  • Credit cost breakdown: hourly rate, current balance, estimated runtime.
+  • Warning banner: when balance < 2 hours of runtime.
+  • Back and Launch buttons: Launch has a loading state.
+  • Error message display: for API failures.
+
+  Hmm, looking at the existing code, the first three steps handle bot name, Tele
+  gram token, and a passcode. Step four needs to aggregate all of this. I see th
+  e form data is already collected in an object, which is good.
+
+  Wait... the requirements mention a "credit cost" and a warning if the balance
+  is low. Currently, the component doesn't have any state for user credits or ba
+  lance. I'll need to introduce a new variable to simulate or hold this data. Si
+  nce there's no backend connection specified for this story, I'll mock a balanc
+  e to demonstrate the warning banner logic (balance < 2 hours * 95 credits/hour
+  = 190 credits).
+
+  Also, I need to handle the loading state for the "Launch Bot" button. This mea
+  ns adding an isLaunching boolean to the script section. And I need to handle t
+  he actual API call simulation and potential error messages.
+
+  Actually, looking at the existing formData structure:
+
+  let formData = {
+    botName: '',
+    telegramToken: '',
+    passcode: ''
+  };
+
+  I have everything I need from the previous steps to populate the summary card.
+  The passcode needs a toggle for visibility, similar to the token in step 2. I
+  can implement a showReviewPasscode flag.
+
+  But how should the layout look? It needs a clean summary. I'll use a card-styl
+  e layout with distinct rows for each configuration item. The credit breakdown
+  should be clear, showing the math (Balance / 95 credits/hour).
+
+  If the API call fails, I need to display that error within the review step so
+  the user knows what went wrong without losing their context.
+
+  So, the plan is:
+
+  1. Update the <script> block to include state for credits, loading, errors, an
+     asscode visibility.
+  2. Define the handleLaunch async function to simulate the API call.
+  3. Replace the placeholder in the {:else} block (which currently handles step
+     with the full review UI.
+  4. Add the specific CSS for the summary card, credit rows, and the warning ban
+     .
+
+  This approach ensures all functional requirements for US-006 are met within th
+  e existing modal structure. I'll proceed with the StrReplaceFile operation now
+  to inject these changes into the component file.
+• Now I understand the structure. I need to implement Step 4 "Review and Launch"
+  . Let me add the necessary code for this step:
+• Used StrReplaceFile (src/lib/components/VMCreationModal.svelte)
+  No replacements made
+• Let me check the exact formatting of the file.
+• Used Shell (cd /root/code/minion && h...velte | cat -A | head -60)
+• I see - the indentation uses spaces, not tabs. Let me fix the search strings.
+• Used StrReplaceFile (src/lib/components/VMCreationModal.svelte)
+• Now I need to replace the placeholder content for Step 4 with the actual revie
+  w and launch content. Let me find and replace that section.
+• Now let me replace the Step 4 placeholder content:
+• Used StrReplaceFile (src/lib/components/VMCreationModal.svelte)
+• Now I need to update the footer buttons for Step 4 to show "Launch Bot" instea
+  d of "Next" and handle the loading state. Let me update that section.
+• Now let me update the footer to handle Step 4's "Launch Bot" button:
+• Used StrReplaceFile (src/lib/components/VMCreationModal.svelte)
+• Now I need to add the CSS styles for the Step 4 components. Let me add them be
+  fore the mobile media query.
+• Now let me add the CSS styles for Step 4 components:
+• Used StrReplaceFile (src/lib/components/VMCreationModal.svelte)
+• Now let me also update the mobile styles to handle Step 4 specific elements. L
+  et me check the mobile media query section and add any necessary overrides.
+• Let me also add mobile styles for the new components:
+• Used StrReplaceFile (src/lib/components/VMCreationModal.svelte)
+• Now let me run the typecheck to make sure everything compiles correctly.
+• Now let's run typecheck to verify the code:
+• Used Shell (cd /root/code/minion && n...run check 2>&1 | head -50)
+• Good - typecheck passes with just warnings (2 unused CSS selectors and 1 pre-e
+  xisting accessibility warning). Let me clean up the unused CSS selectors since
+  we no longer need the placeholder styles.
+• Let me clean up the unused CSS:
+• Used StrReplaceFile (src/lib/components/VMCreationModal.svelte)
+LLM provider error: Error code: 429 - {'error': {'message': "We're receiving too
+many requests at the moment. Please wait a moment and try again.", 'type': 'rate
+_limit_reached_error'}}

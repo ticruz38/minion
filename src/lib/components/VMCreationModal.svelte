@@ -56,6 +56,19 @@
   const PASSCODE_MIN_LENGTH = 4;
   const PASSCODE_MAX_LENGTH = 20;
 
+  // Step 4 state
+  let isLaunching = false;
+  let launchError = '';
+  let showReviewPasscode = false;
+  
+  // Credit constants (mock data - in real app, fetch from API)
+  const HOURLY_RATE = 95;
+  let userBalance = 500; // Mock balance - would come from user profile
+  
+  // Check if balance is low (< 2 hours runtime)
+  $: estimatedHours = Math.floor(userBalance / HOURLY_RATE);
+  $: isLowBalance = userBalance < HOURLY_RATE * 2;
+
   // Check if form has any data
   $: isDirty = formData.botName !== '' || formData.telegramToken !== '' || formData.passcode !== '';
 
@@ -176,6 +189,43 @@
   function goToNextStep() {
     if (currentStep < totalSteps) {
       currentStep++;
+    }
+  }
+
+  function toggleReviewPasscodeVisibility() {
+    showReviewPasscode = !showReviewPasscode;
+  }
+
+  async function handleLaunch() {
+    if (!selectedMinion) return;
+    
+    isLaunching = true;
+    launchError = '';
+    
+    try {
+      const response = await fetch('/api/vms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.botName,
+          token: formData.telegramToken,
+          passcode: formData.passcode,
+          minionId: selectedMinion.id
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        dispatch('success');
+        closeModal();
+      } else {
+        launchError = result.message || 'Failed to launch bot. Please try again.';
+      }
+    } catch (error) {
+      launchError = 'Network error. Please check your connection and try again.';
+    } finally {
+      isLaunching = false;
     }
   }
 
@@ -509,10 +559,115 @@
                 </span>
               </div>
             </div>
-          {:else}
-            <!-- Placeholder for other steps -->
-            <div class="placeholder-content" in:fade={{ duration: 200 }}>
-              <p class="placeholder-text">Step {currentStep} coming in next stories...</p>
+          {:else if currentStep === 4}
+            <!-- Step 4: Review and Launch -->
+            <div class="step-form" in:fade={{ duration: 200 }}>
+              <h3 class="step-title">Review and Launch</h3>
+              <p class="step-description">
+                Review your configuration before launching your {selectedMinion?.name || 'bot'}.
+              </p>
+
+              <!-- Configuration Summary Card -->
+              <div class="summary-card">
+                <div class="summary-header">
+                  {#if selectedMinion}
+                    <div class="summary-avatar">
+                      <MinionAvatar3D 
+                        minionId={selectedMinion.id} 
+                        color={selectedMinion.color}
+                        isHovered={false}
+                        isSelected={true}
+                      />
+                    </div>
+                    <div class="summary-minion-info">
+                      <span class="summary-minion-name" style="color: {selectedMinion.color}">{selectedMinion.name}</span>
+                      <span class="summary-minion-role">AI Assistant</span>
+                    </div>
+                  {/if}
+                </div>
+                
+                <div class="summary-divider"></div>
+                
+                <div class="summary-details">
+                  <div class="summary-row">
+                    <span class="summary-label">Bot Name</span>
+                    <span class="summary-value">{formData.botName}</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="summary-label">Telegram</span>
+                    <span class="summary-value status-connected">● Connected</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="summary-label">Passcode</span>
+                    <div class="summary-passcode">
+                      <span class="summary-value passcode-value">
+                        {showReviewPasscode ? formData.passcode : '•'.repeat(formData.passcode.length)}
+                      </span>
+                      <button
+                        type="button"
+                        class="passcode-toggle"
+                        on:click={toggleReviewPasscodeVisibility}
+                        aria-label={showReviewPasscode ? 'Hide passcode' : 'Show passcode'}
+                      >
+                        {#if showReviewPasscode}
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                            <line x1="1" y1="1" x2="23" y2="23"></line>
+                          </svg>
+                        {:else}
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                          </svg>
+                        {/if}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Credit Cost Breakdown -->
+              <div class="credits-section">
+                <h4 class="credits-title">💰 Credit Usage</h4>
+                <div class="credits-card">
+                  <div class="credits-row">
+                    <span class="credits-label">Hourly Rate</span>
+                    <span class="credits-value">{HOURLY_RATE} credits/hour</span>
+                  </div>
+                  <div class="credits-row">
+                    <span class="credits-label">Your Balance</span>
+                    <span class="credits-value" class:low-balance={isLowBalance}>{userBalance} credits</span>
+                  </div>
+                  <div class="credits-divider"></div>
+                  <div class="credits-row total">
+                    <span class="credits-label">Estimated Runtime</span>
+                    <span class="credits-value">~{estimatedHours} hours</span>
+                  </div>
+                </div>
+                
+                {#if isLowBalance}
+                  <div class="warning-banner" transition:fade={{ duration: 200 }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                      <line x1="12" y1="9" x2="12" y2="13"></line>
+                      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <span>Low balance! You have less than 2 hours of runtime remaining.</span>
+                  </div>
+                {/if}
+              </div>
+
+              <!-- Error Message -->
+              {#if launchError}
+                <div class="launch-error" transition:fade={{ duration: 150 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                  {launchError}
+                </div>
+              {/if}
             </div>
           {/if}
         </div>
@@ -540,7 +695,11 @@
       <!-- Footer -->
       <div class="modal-footer">
         {#if currentStep > 1}
-          <button class="btn btn-secondary" on:click={goToPreviousStep}>
+          <button 
+            class="btn btn-secondary" 
+            on:click={goToPreviousStep}
+            disabled={isLaunching}
+          >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="19" y1="12" x2="5" y2="12"></line>
               <polyline points="12 19 5 12 12 5"></polyline>
@@ -548,23 +707,47 @@
             Back
           </button>
         {:else}
-          <button class="btn btn-secondary" on:click={handleCloseAttempt}>
+          <button class="btn btn-secondary" on:click={handleCloseAttempt} disabled={isLaunching}>
             Cancel
           </button>
         {/if}
         
-        <button 
-          class="btn btn-primary" 
-          style="--btn-color: {selectedMinion?.color || '#6366f1'}"
-          on:click={goToNextStep}
-          disabled={(currentStep === 1 && !isStep1Valid) || (currentStep === 2 && !isStep2Valid) || (currentStep === 3 && !isStep3Valid)}
-        >
-          Next
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-            <polyline points="12 5 19 12 12 19"></polyline>
-          </svg>
-        </button>
+        {#if currentStep === 4}
+          <!-- Launch Bot button for Step 4 -->
+          <button 
+            class="btn btn-primary btn-launch" 
+            style="--btn-color: {selectedMinion?.color || '#6366f1'}"
+            on:click={handleLaunch}
+            disabled={isLaunching}
+          >
+            {#if isLaunching}
+              <svg class="spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" stroke-dasharray="60" stroke-dashoffset="20"></circle>
+              </svg>
+              Launching...
+            {:else}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 2L11 13"></path>
+                <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
+              </svg>
+              Launch Bot
+            {/if}
+          </button>
+        {:else}
+          <!-- Next button for Steps 1-3 -->
+          <button 
+            class="btn btn-primary" 
+            style="--btn-color: {selectedMinion?.color || '#6366f1'}"
+            on:click={goToNextStep}
+            disabled={(currentStep === 1 && !isStep1Valid) || (currentStep === 2 && !isStep2Valid) || (currentStep === 3 && !isStep3Valid)}
+          >
+            Next
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+        {/if}
       </div>
     </div>
 
@@ -1041,21 +1224,6 @@
     letter-spacing: 0.1em;
   }
 
-  /* Placeholder */
-  .placeholder-content {
-    text-align: center;
-    padding: 2rem;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px dashed rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-  }
-
-  .placeholder-text {
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 0.9375rem;
-    margin: 0;
-  }
-
   /* Footer */
   .modal-footer {
     display: flex;
@@ -1171,6 +1339,214 @@
     justify-content: center;
   }
 
+  /* Summary Card */
+  .summary-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .summary-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .summary-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .summary-minion-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .summary-minion-name {
+    font-size: 1.125rem;
+    font-weight: 700;
+  }
+
+  .summary-minion-role {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .summary-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .summary-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .summary-label {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .summary-value {
+    font-size: 0.9375rem;
+    color: white;
+    font-weight: 500;
+  }
+
+  .status-connected {
+    color: #10b981;
+  }
+
+  .summary-passcode {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .passcode-value {
+    font-family: 'Monaco', 'Menlo', monospace;
+    letter-spacing: 0.1em;
+  }
+
+  .passcode-toggle {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 0.25rem;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .passcode-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  /* Credits Section */
+  .credits-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .credits-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0;
+  }
+
+  .credits-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+
+  .credits-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .credits-row.total {
+    padding-top: 0.625rem;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  }
+
+  .credits-label {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .credits-value {
+    font-size: 0.875rem;
+    color: white;
+    font-weight: 500;
+    font-family: 'Monaco', 'Menlo', monospace;
+  }
+
+  .credits-value.low-balance {
+    color: #f59e0b;
+  }
+
+  .credits-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  /* Warning Banner */
+  .warning-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.75rem 1rem;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 10px;
+    color: #f59e0b;
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
+
+  .warning-banner svg {
+    flex-shrink: 0;
+  }
+
+  /* Launch Error */
+  .launch-error {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+
+  /* Launch Button */
+  .btn-launch {
+    min-width: 140px;
+    justify-content: center;
+  }
+
+  /* Spinner Animation */
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .spinner {
+    animation: spin 1s linear infinite;
+  }
+
   /* Scrollbar */
   .modal-content::-webkit-scrollbar {
     width: 6px;
@@ -1241,8 +1617,33 @@
       justify-content: center;
     }
 
+    .btn:disabled {
+      opacity: 0.5;
+    }
+
     .form-input {
       font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    .summary-card {
+      padding: 1rem;
+    }
+
+    .summary-avatar {
+      width: 50px;
+      height: 50px;
+    }
+
+    .summary-minion-name {
+      font-size: 1rem;
+    }
+
+    .credits-card {
+      padding: 0.875rem;
+    }
+
+    .warning-banner {
+      font-size: 0.75rem;
     }
   }
 

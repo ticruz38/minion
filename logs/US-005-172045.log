@@ -1,0 +1,362 @@
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ # Ralph Agent Instructions                                                   │
+│                                                                              │
+│ You are an autonomous coding agent working on a software project.            │
+│                                                                              │
+│ ## Your Task                                                                 │
+│                                                                              │
+│ 1. Read the PRD at `prd.json` (in the same directory as this file)           │
+│ 2. Read the progress log at `progress.txt` (check Codebase Patterns section  │
+│ first)                                                                       │
+│ 3. Check you're on the correct branch from PRD `branchName`. If not, check i │
+│ t out or create from main.                                                   │
+│ 4. Pick the **highest priority** user story where `passes: false`            │
+│ 5. Implement that single user story                                          │
+│ 6. Run quality checks (e.g., typecheck, lint, test - use whatever your proje │
+│ ct requires)                                                                 │
+│ 7. Update AGENTS.md files if you discover reusable patterns (see below)      │
+│ 8. If checks pass, commit ALL changes with message: `feat: [Story ID] - [Sto │
+│ ry Title]`                                                                   │
+│ 9. Update the PRD to set `passes: true` for the completed story              │
+│ 10. Append your progress to `progress.txt`                                   │
+│                                                                              │
+│ ## Progress Report Format                                                    │
+│                                                                              │
+│ APPEND to progress.txt (never replace, always append):                       │
+│ ```                                                                          │
+│ ## [Date/Time] - [Story ID]                                                  │
+│ - What was implemented                                                       │
+│ - Files changed                                                              │
+│ - **Learnings for future iterations:**                                       │
+│   - Patterns discovered (e.g., "this codebase uses X for Y")                 │
+│   - Gotchas encountered (e.g., "don't forget to update Z when changing W")   │
+│   - Useful context (e.g., "the evaluation panel is in component X")          │
+│ ---                                                                          │
+│ ```                                                                          │
+│                                                                              │
+│ The learnings section is critical - it helps future iterations avoid repeati │
+│ ng mistakes and understand the codebase better.                              │
+│                                                                              │
+│ ## Consolidate Patterns                                                      │
+│                                                                              │
+│ If you discover a **reusable pattern** that future iterations should know, a │
+│ dd it to the `## Codebase Patterns` section at the TOP of progress.txt (crea │
+│ te it if it doesn't exist). This section should consolidate the most importa │
+│ nt learnings:                                                                │
+│                                                                              │
+│ ```                                                                          │
+│ ## Codebase Patterns                                                         │
+│ - Example: Use `sql<number>` template for aggregations                       │
+│ - Example: Always use `IF NOT EXISTS` for migrations                         │
+│ - Example: Export types from actions.ts for UI components                    │
+│ ```                                                                          │
+│                                                                              │
+│ Only add patterns that are **general and reusable**, not story-specific deta │
+│ ils.                                                                         │
+│                                                                              │
+│ ## Update AGENTS.md Files                                                    │
+│                                                                              │
+│ Before committing, check if any edited files have learnings worth preserving │
+│ in nearby AGENTS.md files:                                                   │
+│                                                                              │
+│ 1. **Identify directories with edited files** - Look at which directories yo │
+│ u modified                                                                   │
+│ 2. **Check for existing AGENTS.md** - Look for AGENTS.md in those directorie │
+│ s or parent directories                                                      │
+│ 3. **Add valuable learnings** - If you discovered something future developer │
+│ s/agents should know:                                                        │
+│    - API patterns or conventions specific to that module                     │
+│    - Gotchas or non-obvious requirements                                     │
+│    - Dependencies between files                                              │
+│    - Testing approaches for that area                                        │
+│    - Configuration or environment requirements                               │
+│                                                                              │
+│ **Examples of good AGENTS.md additions:**                                    │
+│ - "When modifying X, also update Y to keep them in sync"                     │
+│ - "This module uses pattern Z for all API calls"                             │
+│ - "Tests require the dev server running on PORT 3000"                        │
+│ - "Field names must match the template exactly"                              │
+│                                                                              │
+│ **Do NOT add:**                                                              │
+│ - Story-specific implementation details                                      │
+│ - Temporary debugging notes                                                  │
+│ - Information already in progress.txt                                        │
+│                                                                              │
+│ Only update AGENTS.md if you have **genuinely reusable knowledge** that woul │
+│ d help future work in that directory.                                        │
+│                                                                              │
+│ ## Quality Requirements                                                      │
+│                                                                              │
+│ - ALL commits must pass your project's quality checks (typecheck, lint, test │
+│ )                                                                            │
+│ - Do NOT commit broken code                                                  │
+│ - Keep changes focused and minimal                                           │
+│ - Follow existing code patterns                                              │
+│                                                                              │
+│ ## Browser Testing (Required for Frontend Stories)                           │
+│                                                                              │
+│ For any story that changes UI, you MUST verify it works in the browser:      │
+│                                                                              │
+│ 1. Load the `dev-browser` skill                                              │
+│ 2. Navigate to the relevant page                                             │
+│ 3. Verify the UI changes work as expected                                    │
+│ 4. Take a screenshot if helpful for the progress log                         │
+│                                                                              │
+│ A frontend story is NOT complete until browser verification passes.          │
+│                                                                              │
+│ ## Stop Condition                                                            │
+│                                                                              │
+│ After completing a user story, check if ALL stories have `passes: true`.     │
+│                                                                              │
+│ If ALL stories are complete and passing, reply with:                         │
+│ <promise>COMPLETE</promise>                                                  │
+│                                                                              │
+│ If there are still stories with `passes: false`, end your response normally  │
+│ (another iteration will pick up the next story).                             │
+│                                                                              │
+│ ## Important                                                                 │
+│                                                                              │
+│ - Work on ONE story per iteration                                            │
+│ - Commit frequently                                                          │
+│ - Keep CI green                                                              │
+│ - Read the Codebase Patterns section in progress.txt before starting         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+• Let me start by reading the PRD file and the progress log to understand what n
+  eeds to be done.
+• Used ReadFile (prd.json)
+• Used ReadFile (progress.txt)
+• Let me check the current branch and then look at the VMCreationModal component
+  to understand the current implementation before implementing US-005 (Step 3 -
+  Security Passcode).
+• Now let me check the current branch and the current state of the VMCreationMod
+  al component:
+• Used Shell (git branch --show-current && git status)
+• Used ReadFile (src/lib/components/VMCreationModal.svelte)
+• Let me continue reading the rest of the file:
+• Used ReadFile (src/lib/components/VMCreationModal.svelte)
+• I've confirmed that the code for Step 3 (Security Passcode) already exists wit
+  hin the VMCreationModal.svelte component. This is interesting because the PRD
+  explicitly marks US-005 as not yet passing. Let me cross-reference the impleme
+  ntation with the acceptance criteria for US-005.
+
+  The AC requires:
+
+  1. Input for passcode with 4-20 character limit — The code uses PASSCODE_MIN_L
+     TH = 4 and PASSCODE_MAX_LENGTH = 20 and enforces them in validatePasscode.
+  2. Show/hide toggle for passcode visibility — There is a showPasscode state an
+     togglePasscodeVisibility function linked to a button in the UI.
+  3. Dice icon button to generate random 8-character passcode — generateRandomPa
+     ode creates an 8-char alphanumeric string, and the UI includes a dice SVG.
+  4. Explanatory text regarding user messaging — The .security-help-box contains
+     e text "Why do I need a passcode?" and explains that users must message it
+     the bot.
+  5. Back/Next navigation with Next disabled until valid — The modal has navigat
+     buttons, and the Next button is disabled based on !isStep3Valid.
+  6. Typecheck passes — I need to verify this.
+
+  Hmm, if the code is already there, why is the story marked as incomplete in th
+  e PRD? It's possible that while the code exists in the file, it hasn't been co
+  mmitted as a completed unit of work, or perhaps the task is to ensure the enti
+  re story (including passing tests and updated logs) is finalized.
+
+  Actually, looking at the VMCreationModal.svelte file, the implementation seems
+  robust. The validation logic is reactive, and the UI elements match the requir
+  ements perfectly. The dice icon is a nice touch for the random generation requ
+  irement.
+
+  But wait—I should be careful. Just because the code exists doesn't mean the pr
+  oject is in a valid state. I need to ensure that the TypeScript compiler is ha
+  ppy with these changes and that I haven't introduced any regressions in other
+  parts of the modal. Also, I need to check if the component actually compiles w
+  ithin the broader application context.
+
+  Wait, I see passcodeError and passcodeTouched variables. The logic if (passcod
+  eTouched || formData.passcode.length > 0) is a good pattern to avoid showing e
+  rrors immediately on load. This suggests the developer who wrote this was foll
+  owing good UX practices.
+
+  Before I move on to updating the PRD or checking the browser, I must verify th
+  e build. If svelte-check fails, the story isn't actually done. I'll run the ty
+  pecheck and build commands to get a clear picture of the current technical deb
+  t. I also want to see a list of recent files to understand what else might hav
+  e been modified recently in this branch.
+• Looking at the code, I can see that Step 3 (Security Passcode) is already impl
+  emented in the VMCreationModal.svelte file! The implementation includes:
+
+  • Input with 4-20 character limit
+  • Show/hide toggle for passcode visibility
+  • Dice icon button for random passcode generation
+  • Help text explaining the passcode requirement
+  • Navigation with Back/Next buttons
+  • Validation state for Next button disabled
+
+  Let me verify it works by running typecheck and then browser testing:
+• Used Shell (cd /root/code/minion && n...run check 2>&1 | head -50)
+• Used Shell (cd /root/code/minion && n...run build 2>&1 | tail -30)
+• Typecheck passes (0 errors, 1 pre-existing warning) and build passes. Now I ne
+  ed to verify the Step 3 functionality in the browser using the dev-browser ski
+  ll.
+
+  Let me read the playwright skill first to set up browser testing.
+• Typecheck passes and build passes. Now let me verify Step 3 in the browser:
+• Used ReadFile (/root/.config/agents/skil...playwright-skill/SKILL.md)
+• Now I understand how to use the playwright skill. Let me:
+
+  1. First detect if there's a dev server running
+  2. Write a test script to verify Step 3 in the browser
+  3. Take screenshots of empty input, generated passcode, and revealed state
+• Let me start the dev server and verify Step 3 in the browser:
+• Used Shell (cd /root/.config/agents/s....log(JSON.stringify(s)))")
+• Used Shell (cd /root/code/minion && n...dev-server.log | head -20)
+  Killed by timeout (60s)
+• Good, there's a dev server running. I found servers on port 3000, 3001, and 80
+  80. Let me check which one is the Minion app by visiting them, or I can just u
+  se the new one on port 5176. Let me write a test script to verify Step 3 funct
+  ionality.
+• The dev server is running on port 5176. Let me write a Playwright test to veri
+  fy Step 3:
+• Used WriteFile (/tmp/playwright-test-step3.js)
+• Now let me run the test script.
+• Used Shell (cd /root/.config/agents/s.../playwright-test-step3.js)
+  Failed with exit code: 1
+• I need to use headless mode since there's no X server. Let me update the test
+  script to use headless mode.
+• I need to run in headless mode. Let me update the test:
+• Used StrReplaceFile (/tmp/playwright-test-step3.js)
+• Let me run the test again with headless mode.
+• Used Shell (cd /root/.config/agents/s.../playwright-test-step3.js)
+• Excellent! All tests pass. Let me verify the screenshots look correct:
+• All tests pass! Let me verify the screenshots:
+• Used ReadMediaFile (/tmp/us-005-step3-empty.png)
+• Used ReadMediaFile (/tmp/us-005-step3-generated.png)
+• Used ReadMediaFile (/tmp/us-005-step3-revealed.png)
+• The screenshots look good:
+
+  1. Empty input state - shows empty passcode input with dice icon for generatio
+     nd eye icon for visibility toggle
+  2. Generated passcode state - shows masked passcode (8 dots) with green border
+     alid state), character counter shows 8/20
+  3. Revealed state - shows passcode in plain text "yadHlgYo" with eye-off icon
+
+  Let me also verify the mobile screenshot and error state:
+• Excellent! The screenshots show all the required functionality working:
+
+  • Empty input state with dice icon and eye toggle
+  • Generated passcode (8 characters, green border = valid, Next enabled)
+  • Revealed state showing plain text "yadHlgYo"
+
+  Let me also check the mobile and error screenshots:
+• Used ReadMediaFile (/tmp/us-005-step3-mobile.png)
+• Used ReadMediaFile (/tmp/us-005-step3-error.png)
+• Hmm, the visual checks for Step 3 are complete. The mobile layout is solid, th
+  e help text is in place, and the 4-20 character limit is strictly enforced wit
+  h clear error states. Wait, I noticed the dice icon for generating passcodes i
+  s also rendering correctly, which was a specific requirement. Actually, lookin
+  g at the logs, everything seems to be passing as expected. Since US-005 is now
+  verified across all acceptance criteria, I need to formalize this in the proje
+  ct state. I must update prd.json to mark this story as passing. Additionally,
+  I should append the details of this verification to progress.txt to maintain a
+  clear audit trail of the completed work.
+• All screenshots look great:
+
+  Desktop:
+
+  • ✅ Empty input with dice icon and visibility toggle
+  • ✅ Generated passcode with green border (valid state)
+  • ✅ Revealed state showing plain text
+
+  Mobile (375x812):
+
+  • ✅ Full-screen modal with sticky header
+  • ✅ Help box explaining passcode purpose
+  • ✅ Character counter (8/20)
+
+  Error State:
+
+  • ✅ Red border for invalid input
+  • ✅ Error message "Passcode must be at least 4 characters"
+  • ✅ Next button disabled
+
+  The implementation for US-005 (Step 3 - Security Passcode) is complete and wor
+  king. Now let me update the PRD and progress:
+• Used StrReplaceFile (prd.json)
+• Used Shell (cat >> /root/code/minion/...F echo "Progress updated")
+• Now let me commit the changes and verify everything is in order.
+• Now let me commit the changes:
+• Used Shell (cd /root/code/minion && g...rogress.txt && git status)
+• I see the VMCreationModal.svelte file shows as modified but I didn't change it
+  - it already had Step 3 implemented. Let me check what's different in that fil
+  e.
+• Let me check what changes are in the VMCreationModal file:
+• Used Shell (cd /root/code/minion && g...nModal.svelte | head -100)
+• I see - the Step 3 implementation was already added but not committed. It seem
+  s like this work was done by a previous iteration but the PRD wasn't updated a
+  nd the changes weren't committed. Let me include this in the commit since it c
+  ompletes US-005.
+• I see - the Step 3 code was implemented but not committed. Let me include it i
+  n the commit:
+• Used Shell (cd /root/code/minion && g...ep 3 - Security Passcode")
+• The commit is done. Now let me update the progress.txt and prd.json files with
+  the commit:
+• Now let me commit the PRD and progress updates:
+• Used Shell (cd /root/code/minion && g... and progress for US-005")
+  Failed with exit code: 1
+• I see - the prd.json and progress.txt were already committed in the previous c
+  ommit. Let me check the current status.
+• Used Shell (cd /root/code/minion && g...s && git log --oneline -3)
+• I see - the PRD and progress updates were included in the previous commit alon
+  g with the code. Let me verify the PRD was updated correctly.
+• The PRD and progress were already committed in the previous commit. Let me ver
+  ify the PRD shows US-005 as passing:
+• Used Shell (cd /root/code/minion && g...'"id": "US-005"' prd.json)
+• Let me also check the passes field:
+• Used Shell (cd /root/code/minion && g...-005"' prd.json | tail -5)
+• US-005 is marked as passing. Let me now check which stories are still remainin
+  g to be done:
+• US-005 is now marked as passes: true. Let me check what stories remain:
+• Used Shell (cd /root/code/minion && g..."id":|"passes":' prd.json)
+• US-005 is now complete. The remaining stories are:
+
+  • US-006: Build Step 4 - Review and Launch
+  • US-007: Integrate modal with CharacterSelector
+  • US-008: Implement responsive mobile experience
+  • US-009: Create Playwright test suite
+
+  Since there are still stories with passes: false, I should end my response nor
+  mally (not with COMPLETE).
+• Summary
+
+  US-005 - Build Step 3 - Security Passcode is now complete:
+
+  ✅ Acceptance Criteria Met:
+
+  1. ✅ Input for passcode with 4-20 character limit
+  2. ✅ Show/hide toggle for passcode visibility
+  3. ✅ Dice icon button to generate random 8-character passcode
+  4. ✅ Explanatory text: "Users must message this passcode to your bot before t
+     can access it"
+  5. ✅ Back button returns to Step 2, Next proceeds to Step 4
+  6. ✅ Next button disabled until valid passcode length entered
+  7. ✅ Typecheck passes (0 errors)
+  8. ✅ Browser verification passed with screenshots
+
+  Files Changed:
+
+  • src/lib/components/VMCreationModal.svelte - Step 3 implementation
+  • prd.json - Marked US-005 as passing
+  • progress.txt - Added progress log
+
+  Browser Screenshots Captured:
+
+  • Empty input state
+  • Generated passcode (masked, 8 characters)
+  • Revealed state (plain text visible)
+  • Mobile layout (375x812)
+  • Error state (validation for <4 characters)
+
+  Remaining Stories:
+
+  • US-006: Build Step 4 - Review and Launch
+  • US-007: Integrate modal with CharacterSelector
+  • US-008: Implement responsive mobile experience
+  • US-009: Create Playwright test suite
