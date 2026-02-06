@@ -1,16 +1,17 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import CharacterSelector from '$lib/components/CharacterSelector.svelte';
+  import VMCreationModal from '$lib/components/VMCreationModal.svelte';
 
   let showSelector = false;
-  let hiringMinion: { name: string; color: string } | null = null;
+  let hiringMinion: { id: string; name: string; color: string } | null = null;
+  let isModalOpen = false;
 
   onMount(() => {
     // Check for hire event from CharacterSelector
     window.addEventListener('hireMinion', ((e: CustomEvent) => {
       hiringMinion = e.detail;
-      // Scroll to connect section or show modal
-      document.getElementById('connect')?.scrollIntoView({ behavior: 'smooth' });
+      isModalOpen = true;
     }) as EventListener);
 
     // Entrance animation
@@ -21,6 +22,16 @@
 
   function scrollToSelector() {
     document.getElementById('character-select')?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function handleModalClose() {
+    isModalOpen = false;
+  }
+
+  function handleModalSuccess() {
+    // TODO: Handle successful bot creation (US-007)
+    isModalOpen = false;
+    alert('Bot creation flow will continue in future stories!');
   }
 </script>
 
@@ -85,6 +96,14 @@
   <section id="character-select" class="selector-section">
     <CharacterSelector />
   </section>
+
+  <!-- VM Creation Modal -->
+  <VMCreationModal 
+    isOpen={isModalOpen}
+    selectedMinion={hiringMinion}
+    on:close={handleModalClose}
+    on:success={handleModalSuccess}
+  />
 
   <!-- How It Works -->
   <section id="how-it-works" class="how-it-works">
