@@ -15,7 +15,7 @@
   const minions: Minion[] = [
     {
       id: 'accountant',
-      name: 'Bean Counter Benny',
+      name: 'Benny',
       tagline: 'Your books, perfectly balanced',
       description: 'Handles invoicing, expense tracking, tax prep, and financial reports.',
       features: ['Invoicing', 'Expense Tracking', 'Tax Reports', 'Bank Reconciliation'],
@@ -28,7 +28,7 @@
     },
     {
       id: 'realtor',
-      name: 'Open House Owen',
+      name: 'Owen',
       tagline: 'Never miss a good deal',
       description: 'Scans listings 24/7, alerts you to opportunities, tracks market trends.',
       features: ['Listing Alerts', 'Market Analysis', 'Property Database', 'Lead Tracking'],
@@ -41,7 +41,7 @@
     },
     {
       id: 'analyst',
-      name: 'Bear Market Barry',
+      name: 'Barry',
       tagline: 'Data-driven decisions',
       description: 'Monitors markets, analyzes portfolios, generates reports.',
       features: ['Portfolio Tracking', 'Market Alerts', 'Risk Analysis', 'Report Generation'],
@@ -67,7 +67,7 @@
     },
     {
       id: 'scheduler',
-      name: 'Time Lord Terry',
+      name: 'Terry',
       tagline: 'Your calendar, optimized',
       description: 'Manages appointments, finds optimal meeting times, sends reminders.',
       features: ['Smart Scheduling', 'Conflict Resolution', 'Auto Reminders', 'Time Blocking'],
@@ -80,7 +80,7 @@
     },
     {
       id: 'support',
-      name: 'Ticket Tim',
+      name: 'Tim',
       tagline: 'Always on, always helpful',
       description: 'Answers customer queries, routes complex issues, maintains FAQs.',
       features: ['24/7 Response', 'Ticket Routing', 'FAQ Management', 'Escalation'],
