@@ -14,6 +14,10 @@
     success: void;
   }>();
 
+  // Step tracking
+  let currentStep = 1;
+  const totalSteps = 4;
+
   // Track if form is dirty (has any user input)
   let isDirty = false;
   let showConfirmClose = false;
@@ -26,8 +30,65 @@
     passcode: ''
   };
 
+  // Validation state for Step 1
+  let botNameError = '';
+  let botNameTouched = false;
+
+  // Bot name validation
+  const BOT_NAME_MIN_LENGTH = 3;
+  const BOT_NAME_MAX_LENGTH = 30;
+  const BOT_NAME_REGEX = /^[a-zA-Z0-9-]+$/;
+
   // Check if form has any data
   $: isDirty = formData.botName !== '' || formData.telegramToken !== '' || formData.passcode !== '';
+
+  // Real-time bot name validation
+  $: {
+    if (botNameTouched || formData.botName.length > 0) {
+      botNameError = validateBotName(formData.botName);
+    } else {
+      botNameError = '';
+    }
+  }
+
+  // Check if Step 1 is valid
+  $: isStep1Valid = formData.botName.length >= BOT_NAME_MIN_LENGTH && 
+                    formData.botName.length <= BOT_NAME_MAX_LENGTH && 
+                    BOT_NAME_REGEX.test(formData.botName);
+
+  function validateBotName(name: string): string {
+    if (name.length === 0) {
+      return '';
+    }
+    if (name.length < BOT_NAME_MIN_LENGTH) {
+      return `Bot name must be at least ${BOT_NAME_MIN_LENGTH} characters`;
+    }
+    if (name.length > BOT_NAME_MAX_LENGTH) {
+      return `Bot name must be no more than ${BOT_NAME_MAX_LENGTH} characters`;
+    }
+    if (!BOT_NAME_REGEX.test(name)) {
+      return 'Only letters, numbers, and hyphens allowed';
+    }
+    return '';
+  }
+
+  function handleBotNameInput(e: Event) {
+    const input = e.target as HTMLInputElement;
+    formData.botName = input.value;
+    botNameTouched = true;
+  }
+
+  function goToNextStep() {
+    if (currentStep < totalSteps) {
+      currentStep++;
+    }
+  }
+
+  function goToPreviousStep() {
+    if (currentStep > 1) {
+      currentStep--;
+    }
+  }
 
   // Handle escape key
   function handleKeyDown(e: KeyboardEvent) {
@@ -52,6 +113,9 @@
     // Reset form data when modal closes
     setTimeout(() => {
       formData = { botName: '', telegramToken: '', passcode: '' };
+      currentStep = 1;
+      botNameTouched = false;
+      botNameError = '';
     }, 300);
   }
 
@@ -138,31 +202,118 @@
                 isSelected={true}
               />
             </div>
+            <div class="minion-info">
+              <span class="minion-role">{selectedMinion.name}</span>
+              <span class="minion-role-description">AI Assistant</span>
+            </div>
           </div>
         {/if}
 
-        <div class="placeholder-content">
-          <p class="placeholder-text">Multi-step form coming in next stories...</p>
+        <!-- Step Content -->
+        <div class="step-content">
+          {#if currentStep === 1}
+            <!-- Step 1: Name Your Bot -->
+            <div class="step-form" in:fade={{ duration: 200 }}>
+              <h3 class="step-title">Name Your Bot</h3>
+              <p class="step-description">
+                Give your {selectedMinion?.name || 'bot'} a memorable name that you'll use to interact with it.
+              </p>
+
+              <div class="form-group">
+                <label for="bot-name" class="form-label">
+                  Bot Name
+                  <span class="required">*</span>
+                </label>
+                <div class="input-wrapper" class:error={botNameError !== ''} class:valid={isStep1Valid}>
+                  <input
+                    type="text"
+                    id="bot-name"
+                    class="form-input"
+                    placeholder="e.g., my-awesome-bot"
+                    value={formData.botName}
+                    on:input={handleBotNameInput}
+                    maxlength={BOT_NAME_MAX_LENGTH}
+                    autocomplete="off"
+                  />
+                  {#if isStep1Valid}
+                    <span class="input-icon valid-icon">✓</span>
+                  {/if}
+                </div>
+                <div class="input-meta">
+                  <span class="char-count" class:near-limit={formData.botName.length > BOT_NAME_MAX_LENGTH - 5}>
+                    {formData.botName.length}/{BOT_NAME_MAX_LENGTH}
+                  </span>
+                </div>
+                {#if botNameError}
+                  <span class="error-message" transition:fade={{ duration: 150 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="8" x2="12" y2="12"></line>
+                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    {botNameError}
+                  </span>
+                {/if}
+                <span class="help-text">
+                  Use only letters, numbers, and hyphens. 3-30 characters.
+                </span>
+              </div>
+            </div>
+          {:else}
+            <!-- Placeholder for other steps -->
+            <div class="placeholder-content" in:fade={{ duration: 200 }}>
+              <p class="placeholder-text">Step {currentStep} coming in next stories...</p>
+            </div>
+          {/if}
+        </div>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator-container">
           <div class="step-indicator">
-            <span class="step-dot active"></span>
-            <span class="step-dot"></span>
-            <span class="step-dot"></span>
-            <span class="step-dot"></span>
+            {#each Array(totalSteps) as _, i}
+              <div class="step-dot-wrapper">
+                <span 
+                  class="step-dot" 
+                  class:active={currentStep === i + 1}
+                  class:completed={currentStep > i + 1}
+                ></span>
+                {#if i < totalSteps - 1}
+                  <span class="step-line-segment" class:completed={currentStep > i + 1}></span>
+                {/if}
+              </div>
+            {/each}
           </div>
+          <span class="step-text">Step {currentStep} of {totalSteps}</span>
         </div>
       </div>
 
       <!-- Footer -->
       <div class="modal-footer">
-        <button class="btn btn-secondary" on:click={handleCloseAttempt}>
-          Cancel
-        </button>
+        {#if currentStep > 1}
+          <button class="btn btn-secondary" on:click={goToPreviousStep}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Back
+          </button>
+        {:else}
+          <button class="btn btn-secondary" on:click={handleCloseAttempt}>
+            Cancel
+          </button>
+        {/if}
+        
         <button 
           class="btn btn-primary" 
           style="--btn-color: {selectedMinion?.color || '#6366f1'}"
-          on:click={() => dispatch('success')}
+          on:click={goToNextStep}
+          disabled={currentStep === 1 && !isStep1Valid}
         >
-          Continue
+          Next
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
         </button>
       </div>
     </div>
@@ -294,19 +445,225 @@
 
   .minion-preview {
     display: flex;
-    justify-content: center;
-    padding: 1rem 0;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
   }
 
   .avatar-container {
-    width: 160px;
-    height: 160px;
+    width: 120px;
+    height: 120px;
     border-radius: 20px;
     border: 2px solid var(--avatar-color);
     padding: 4px;
-    box-shadow: 0 0 40px var(--avatar-color);
+    box-shadow: 0 0 30px var(--avatar-color);
   }
 
+  .minion-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .minion-role {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--minion-color, #6366f1);
+  }
+
+  .minion-role-description {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* Step Content */
+  .step-content {
+    flex: 1;
+  }
+
+  .step-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .step-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+  }
+
+  .step-description {
+    font-size: 0.9375rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  /* Form Styles */
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .form-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .required {
+    color: #ef4444;
+  }
+
+  .input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    padding-right: 2.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: white;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+  }
+
+  .form-input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: var(--minion-color, #6366f1);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  }
+
+  .input-wrapper.error .form-input {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.05);
+  }
+
+  .input-wrapper.valid .form-input {
+    border-color: #10b981;
+  }
+
+  .input-icon {
+    position: absolute;
+    right: 1rem;
+    font-size: 1rem;
+  }
+
+  .valid-icon {
+    color: #10b981;
+    font-weight: 700;
+  }
+
+  .input-meta {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .char-count {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+    transition: color 0.2s ease;
+  }
+
+  .char-count.near-limit {
+    color: #f59e0b;
+  }
+
+  .error-message {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    padding: 0.625rem 0.875rem;
+    border-radius: 8px;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+
+  .help-text {
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  /* Step Indicator */
+  .step-indicator-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding-top: 0.5rem;
+  }
+
+  .step-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+
+  .step-dot-wrapper {
+    display: flex;
+    align-items: center;
+  }
+
+  .step-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+  }
+
+  .step-dot.active {
+    background: var(--minion-color, #6366f1);
+    box-shadow: 0 0 10px var(--minion-color, #6366f1);
+    transform: scale(1.2);
+  }
+
+  .step-dot.completed {
+    background: #10b981;
+  }
+
+  .step-line-segment {
+    width: 40px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.2);
+    margin: 0 0.5rem;
+    transition: all 0.3s ease;
+  }
+
+  .step-line-segment.completed {
+    background: #10b981;
+  }
+
+  .step-text {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* Placeholder */
   .placeholder-content {
     text-align: center;
     padding: 2rem;
@@ -318,34 +675,13 @@
   .placeholder-text {
     color: rgba(255, 255, 255, 0.4);
     font-size: 0.9375rem;
-    margin: 0 0 1.5rem 0;
-  }
-
-  .step-indicator {
-    display: flex;
-    justify-content: center;
-    gap: 0.5rem;
-  }
-
-  .step-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.2);
-    transition: all 0.3s ease;
-  }
-
-  .step-dot.active {
-    background: var(--minion-color, #6366f1);
-    box-shadow: 0 0 10px var(--minion-color, #6366f1);
-    width: 24px;
-    border-radius: 4px;
+    margin: 0;
   }
 
   /* Footer */
   .modal-footer {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     gap: 0.75rem;
     padding: 1rem 1.5rem 1.5rem;
     border-top: 1px solid rgba(255, 255, 255, 0.05);
@@ -360,6 +696,9 @@
     cursor: pointer;
     transition: all 0.2s ease;
     border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .btn-primary {
@@ -367,12 +706,20 @@
     background-size: 200% 100%;
     border: 2px solid var(--btn-color, #6366f1);
     color: white;
+    margin-left: auto;
   }
 
-  .btn-primary:hover {
+  .btn-primary:hover:not(:disabled) {
     background-position: 100% 0;
     box-shadow: 0 0 20px var(--btn-color, #6366f1);
     transform: translateY(-1px);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
   }
 
   .btn-secondary {
@@ -490,8 +837,16 @@
     }
 
     .avatar-container {
-      width: 120px;
-      height: 120px;
+      width: 100px;
+      height: 100px;
+    }
+
+    .step-title {
+      font-size: 1.125rem;
+    }
+
+    .step-line-segment {
+      width: 30px;
     }
 
     .modal-footer {
@@ -505,6 +860,11 @@
     .btn {
       flex: 1;
       padding: 0.875rem 1.5rem;
+      justify-content: center;
+    }
+
+    .form-input {
+      font-size: 16px; /* Prevents zoom on iOS */
     }
   }
 
