@@ -47,6 +47,15 @@
   // Telegram token validation pattern: digits:alphanumeric
   const TOKEN_REGEX = /^\d+:[a-zA-Z0-9_-]+$/;
 
+  // Validation state for Step 3
+  let passcodeError = '';
+  let passcodeTouched = false;
+  let showPasscode = false;
+
+  // Passcode validation constants
+  const PASSCODE_MIN_LENGTH = 4;
+  const PASSCODE_MAX_LENGTH = 20;
+
   // Check if form has any data
   $: isDirty = formData.botName !== '' || formData.telegramToken !== '' || formData.passcode !== '';
 
@@ -75,6 +84,19 @@
 
   // Check if Step 2 is valid
   $: isStep2Valid = TOKEN_REGEX.test(formData.telegramToken);
+
+  // Real-time passcode validation
+  $: {
+    if (passcodeTouched || formData.passcode.length > 0) {
+      passcodeError = validatePasscode(formData.passcode);
+    } else {
+      passcodeError = '';
+    }
+  }
+
+  // Check if Step 3 is valid
+  $: isStep3Valid = formData.passcode.length >= PASSCODE_MIN_LENGTH && 
+                    formData.passcode.length <= PASSCODE_MAX_LENGTH;
 
   function validateBotName(name: string): string {
     if (name.length === 0) {
@@ -114,6 +136,39 @@
     }
     if (!TOKEN_REGEX.test(token)) {
       return 'Token format should be: numbers:letters (e.g., 123456:ABC-DEF123)';
+    }
+    return '';
+  }
+
+  function handlePasscodeInput(e: Event) {
+    const input = e.target as HTMLInputElement;
+    formData.passcode = input.value;
+    passcodeTouched = true;
+  }
+
+  function togglePasscodeVisibility() {
+    showPasscode = !showPasscode;
+  }
+
+  function generateRandomPasscode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    formData.passcode = result;
+    passcodeTouched = true;
+  }
+
+  function validatePasscode(passcode: string): string {
+    if (passcode.length === 0) {
+      return '';
+    }
+    if (passcode.length < PASSCODE_MIN_LENGTH) {
+      return `Passcode must be at least ${PASSCODE_MIN_LENGTH} characters`;
+    }
+    if (passcode.length > PASSCODE_MAX_LENGTH) {
+      return `Passcode must be no more than ${PASSCODE_MAX_LENGTH} characters`;
     }
     return '';
   }
@@ -364,6 +419,96 @@
                 </div>
               </div>
             </div>
+          {:else if currentStep === 3}
+            <!-- Step 3: Security Passcode -->
+            <div class="step-form" in:fade={{ duration: 200 }}>
+              <h3 class="step-title">Security Passcode</h3>
+              <p class="step-description">
+                Set a passcode that users must send to your bot before they can access it.
+              </p>
+
+              <div class="form-group">
+                <label for="passcode" class="form-label">
+                  Bot Passcode
+                  <span class="required">*</span>
+                </label>
+                <div class="input-wrapper passcode-wrapper" class:error={passcodeError !== ''} class:valid={isStep3Valid}>
+                  <input
+                    type={showPasscode ? 'text' : 'password'}
+                    id="passcode"
+                    class="form-input"
+                    placeholder="Enter a secure passcode"
+                    value={formData.passcode}
+                    on:input={handlePasscodeInput}
+                    maxlength={PASSCODE_MAX_LENGTH}
+                    autocomplete="off"
+                  />
+                  <button
+                    type="button"
+                    class="visibility-toggle passcode-visibility-toggle"
+                    on:click={togglePasscodeVisibility}
+                    aria-label={showPasscode ? 'Hide passcode' : 'Show passcode'}
+                  >
+                    {#if showPasscode}
+                      <!-- Eye-off icon -->
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                      </svg>
+                    {:else}
+                      <!-- Eye icon -->
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    {/if}
+                  </button>
+                  <button
+                    type="button"
+                    class="generate-passcode-btn"
+                    on:click={generateRandomPasscode}
+                    aria-label="Generate random passcode"
+                    title="Generate random passcode"
+                  >
+                    <!-- Dice icon -->
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                      <circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"></circle>
+                      <circle cx="16" cy="8" r="1.5" fill="currentColor" stroke="none"></circle>
+                      <circle cx="8" cy="16" r="1.5" fill="currentColor" stroke="none"></circle>
+                      <circle cx="16" cy="16" r="1.5" fill="currentColor" stroke="none"></circle>
+                    </svg>
+                  </button>
+                </div>
+                <div class="input-meta">
+                  <span class="char-count" class:near-limit={formData.passcode.length > PASSCODE_MAX_LENGTH - 3}>
+                    {formData.passcode.length}/{PASSCODE_MAX_LENGTH}
+                  </span>
+                </div>
+                {#if passcodeError}
+                  <span class="error-message" transition:fade={{ duration: 150 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="8" x2="12" y2="12"></line>
+                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    {passcodeError}
+                  </span>
+                {/if}
+                <div class="help-box security-help-box">
+                  <div class="help-box-icon">🔒</div>
+                  <div class="help-box-content">
+                    <p class="help-box-title">Why do I need a passcode?</p>
+                    <p class="help-box-text">
+                      Users must message this passcode to your bot before they can access it. This prevents unauthorized access.
+                    </p>
+                  </div>
+                </div>
+                <span class="help-text">
+                  Use {PASSCODE_MIN_LENGTH}-{PASSCODE_MAX_LENGTH} characters. Click the dice icon to generate a random passcode.
+                </span>
+              </div>
+            </div>
           {:else}
             <!-- Placeholder for other steps -->
             <div class="placeholder-content" in:fade={{ duration: 200 }}>
@@ -412,7 +557,7 @@
           class="btn btn-primary" 
           style="--btn-color: {selectedMinion?.color || '#6366f1'}"
           on:click={goToNextStep}
-          disabled={(currentStep === 1 && !isStep1Valid) || (currentStep === 2 && !isStep2Valid)}
+          disabled={(currentStep === 1 && !isStep1Valid) || (currentStep === 2 && !isStep2Valid) || (currentStep === 3 && !isStep3Valid)}
         >
           Next
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -738,6 +883,48 @@
   .visibility-toggle:focus {
     outline: none;
     box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+  }
+
+  /* Passcode Input with Generate Button */
+  .passcode-wrapper .form-input {
+    padding-right: 5.5rem;
+  }
+
+  .passcode-visibility-toggle {
+    right: 3rem;
+  }
+
+  .generate-passcode-btn {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: linear-gradient(135deg, var(--minion-color, #6366f1) 0%, transparent 100%);
+    background-size: 200% 100%;
+    border: 1px solid var(--minion-color, #6366f1);
+    border-radius: 8px;
+    padding: 0.375rem;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .generate-passcode-btn:hover {
+    background-position: 100% 0;
+    box-shadow: 0 0 10px var(--minion-color, #6366f1);
+  }
+
+  .generate-passcode-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+  }
+
+  .security-help-box {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.2);
   }
 
   /* Help Box */

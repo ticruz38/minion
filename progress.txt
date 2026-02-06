@@ -214,3 +214,28 @@ Started: Fri Feb  6 04:21:26 PM CET 2026
 - The visibility toggle button should have `type="button"` to prevent form submission
 - CSS: Use `padding-right` on input to make room for the toggle button
 ---
+## 2026-02-06T17:22:00+01:00 - US-005
+- Implemented Step 3 "Security Passcode" in VMCreationModal.svelte
+- Added passcode input with 4-20 character limit validation
+- Implemented show/hide toggle for passcode visibility (eye/eye-off icons)
+- Added dice icon button to generate random 8-character passcode
+- Created security help box explaining passcode purpose
+- Added real-time validation with visual feedback (green border when valid, red when error)
+- Character counter showing current/max (e.g., 8/20)
+- Back button returns to Step 2, Next proceeds to Step 4
+- Next button disabled until valid passcode length (4-20 chars) entered
+- Typecheck passes (0 errors, 1 pre-existing warning)
+- Build passes
+- Browser verification passed with Playwright:
+  - Desktop: Empty input, generated passcode (masked), revealed state all working
+  - Mobile (375x812): Full-screen layout with help box working correctly
+  - Validation: Error message shown for <4 characters, Next disabled when invalid
+- Files changed:
+  - src/lib/components/VMCreationModal.svelte (Step 3 implementation already in place)
+
+**Learnings for future iterations:**
+- Passcode generation pattern: Use `Math.random()` with alphanumeric charset for secure-looking codes
+- Multiple action buttons in input: Position absolute with different `right` values (e.g., visibility toggle at 3rem, generate button at 0.75rem)
+- Help box styling with icon provides good contextual guidance for security features
+- Input padding-right needs to account for multiple action buttons (5.5rem for passcode with 2 buttons)
+---
