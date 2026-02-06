@@ -39,6 +39,14 @@
   const BOT_NAME_MAX_LENGTH = 30;
   const BOT_NAME_REGEX = /^[a-zA-Z0-9-]+$/;
 
+  // Validation state for Step 2
+  let tokenError = '';
+  let tokenTouched = false;
+  let showToken = false;
+
+  // Telegram token validation pattern: digits:alphanumeric
+  const TOKEN_REGEX = /^\d+:[a-zA-Z0-9_-]+$/;
+
   // Check if form has any data
   $: isDirty = formData.botName !== '' || formData.telegramToken !== '' || formData.passcode !== '';
 
@@ -55,6 +63,18 @@
   $: isStep1Valid = formData.botName.length >= BOT_NAME_MIN_LENGTH && 
                     formData.botName.length <= BOT_NAME_MAX_LENGTH && 
                     BOT_NAME_REGEX.test(formData.botName);
+
+  // Real-time token validation
+  $: {
+    if (tokenTouched || formData.telegramToken.length > 0) {
+      tokenError = validateToken(formData.telegramToken);
+    } else {
+      tokenError = '';
+    }
+  }
+
+  // Check if Step 2 is valid
+  $: isStep2Valid = TOKEN_REGEX.test(formData.telegramToken);
 
   function validateBotName(name: string): string {
     if (name.length === 0) {
@@ -76,6 +96,26 @@
     const input = e.target as HTMLInputElement;
     formData.botName = input.value;
     botNameTouched = true;
+  }
+
+  function handleTokenInput(e: Event) {
+    const input = e.target as HTMLInputElement;
+    formData.telegramToken = input.value;
+    tokenTouched = true;
+  }
+
+  function toggleTokenVisibility() {
+    showToken = !showToken;
+  }
+
+  function validateToken(token: string): string {
+    if (token.length === 0) {
+      return '';
+    }
+    if (!TOKEN_REGEX.test(token)) {
+      return 'Token format should be: numbers:letters (e.g., 123456:ABC-DEF123)';
+    }
+    return '';
   }
 
   function goToNextStep() {
@@ -259,6 +299,71 @@
                 </span>
               </div>
             </div>
+          {:else if currentStep === 2}
+            <!-- Step 2: Telegram Configuration -->
+            <div class="step-form" in:fade={{ duration: 200 }}>
+              <h3 class="step-title">Connect Telegram</h3>
+              <p class="step-description">
+                Enter your Telegram bot token to enable messaging. Get one from @BotFather if you haven't already.
+              </p>
+
+              <div class="form-group">
+                <label for="telegram-token" class="form-label">
+                  Bot Token
+                  <span class="required">*</span>
+                </label>
+                <div class="input-wrapper" class:error={tokenError !== ''} class:valid={isStep2Valid}>
+                  <input
+                    type={showToken ? 'text' : 'password'}
+                    id="telegram-token"
+                    class="form-input"
+                    placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+                    value={formData.telegramToken}
+                    on:input={handleTokenInput}
+                    autocomplete="off"
+                  />
+                  <button
+                    type="button"
+                    class="visibility-toggle"
+                    on:click={toggleTokenVisibility}
+                    aria-label={showToken ? 'Hide token' : 'Show token'}
+                  >
+                    {#if showToken}
+                      <!-- Eye-off icon -->
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                      </svg>
+                    {:else}
+                      <!-- Eye icon -->
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    {/if}
+                  </button>
+                </div>
+                {#if tokenError}
+                  <span class="error-message" transition:fade={{ duration: 150 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="8" x2="12" y2="12"></line>
+                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    {tokenError}
+                  </span>
+                {/if}
+                <div class="help-box">
+                  <div class="help-box-icon">💡</div>
+                  <div class="help-box-content">
+                    <p class="help-box-title">Don't have a bot token?</p>
+                    <p class="help-box-text">
+                      Message <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" class="help-link">@BotFather</a> on Telegram and send <code>/newbot</code> to create one.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           {:else}
             <!-- Placeholder for other steps -->
             <div class="placeholder-content" in:fade={{ duration: 200 }}>
@@ -307,7 +412,7 @@
           class="btn btn-primary" 
           style="--btn-color: {selectedMinion?.color || '#6366f1'}"
           on:click={goToNextStep}
-          disabled={currentStep === 1 && !isStep1Valid}
+          disabled={(currentStep === 1 && !isStep1Valid) || (currentStep === 2 && !isStep2Valid)}
         >
           Next
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -604,6 +709,92 @@
   .help-text {
     font-size: 0.8125rem;
     color: rgba(255, 255, 255, 0.4);
+  }
+
+  /* Visibility Toggle Button */
+  .visibility-toggle {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.375rem;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .visibility-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .visibility-toggle:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+  }
+
+  /* Help Box */
+  .help-box {
+    display: flex;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 12px;
+    margin-top: 0.5rem;
+  }
+
+  .help-box-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  .help-box-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .help-box-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0;
+  }
+
+  .help-box-text {
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .help-link {
+    color: var(--minion-color, #6366f1);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .help-link:hover {
+    text-decoration: underline;
+    opacity: 0.9;
+  }
+
+  code {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.7);
   }
 
   /* Step Indicator */
