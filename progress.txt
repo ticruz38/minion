@@ -1,0 +1,39 @@
+## Codebase Patterns
+- Use `zod` for request validation in API endpoints
+- Zod errors use `.issues` array, not `.errors` - each issue has `path` and `message`
+- API endpoints return `{ success: boolean, message: string, ...data }` format
+- Use `safeParse` for Zod validation to avoid throwing
+- Environment variables should be accessed via `process.env`
+- Check for environment variables and degrade gracefully (demo mode)
+- Redis client is initialized lazily (singleton pattern)
+- Use SvelteKit's `json()` helper for responses
+- Use `@sveltejs/kit` `error` helper for HTTP errors
+
+---
+
+# Ralph Progress Log
+Started: Fri Feb  6 04:21:26 PM CET 2026
+
+## 2026-02-06T16:23:14+01:00 - US-001
+- Implemented POST /api/vms endpoint in src/routes/api/vms/+server.ts
+- Added Zod validation for request body (name, token, passcode, minionId)
+- Auto-filled technical fields: model='moonshot/kimi-k2.5', ram=4, cpus=2, disk=20
+- Auto-filled profiles=[minionId], channels.telegram.dmPolicy='passcode', env.BOT_PASSCODE=passcode
+- Implemented Redis publishing to 'clawd:commands' channel with formatted message
+- Added graceful fallback when REDIS_URL is not set (demo mode)
+- Returns appropriate success (201) / error (400/500) responses
+- Installed dependencies: zod, ioredis, @types/ioredis
+- Typecheck passes
+- Build passes
+- Files changed:
+  - package.json
+  - package-lock.json
+  - src/routes/api/vms/+server.ts (new)
+
+**Learnings for future iterations:**
+- Zod validation errors use `.issues` array (not `.errors`), with `path` and `message` properties
+- This codebase uses Zod for validation and ioredis for Redis
+- API responses follow `{ success: boolean, message: string, ...data }` pattern
+- Environment variables like REDIS_URL should be checked and handled gracefully
+- Redis client uses lazy singleton pattern for connection management
+---

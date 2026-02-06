@@ -1,0 +1,170 @@
+{
+  "project": "Minion",
+  "branchName": "ralph/vm-creation-modal",
+  "description": "VM Creation Modal - Multi-Step Bot Configuration for OpenClaw VMs",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create API endpoint for VM creation",
+      "description": "As a developer, I need a backend endpoint to handle VM creation requests that publishes to Redis.",
+      "acceptanceCriteria": [
+        "Create POST /api/vms endpoint in src/routes/api/vms/+server.ts",
+        "Add Zod validation for request body (name, token, passcode, minionId)",
+        "Auto-fill technical fields: model='moonshot/kimi-k2.5', ram=4, cpus=2, disk=20",
+        "Auto-fill profiles=[minionId], channels.telegram.dmPolicy='passcode', env.BOT_PASSCODE=passcode",
+        "Publish formatted message to Redis clawd:commands channel",
+        "Return appropriate success/error response",
+        "Typecheck passes",
+        "Unit tests pass"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Implemented with Zod validation, Redis publishing to clawd:commands channel, demo mode fallback"
+    },
+    {
+      "id": "US-002",
+      "title": "Create VM Creation Modal shell component",
+      "description": "As a developer, I need a reusable modal component that hosts the multi-step flow with proper animations.",
+      "acceptanceCriteria": [
+        "Create VMCreationModal.svelte in src/lib/components/",
+        "Full-screen overlay with backdrop blur effect",
+        "Click outside or X button closes modal with confirmation if form is dirty",
+        "Escape key closes modal",
+        "Scale + fade animations for open/close transitions",
+        "Export props: isOpen, selectedMinion, onClose, onSuccess",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill - screenshot desktop (1280x720) and mobile (375x812)"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Build Step 1 - Name Your Bot",
+      "description": "As a user, I want to give my bot a memorable name with real-time validation.",
+      "acceptanceCriteria": [
+        "Display selected Minion avatar and name at top of step",
+        "Single text input for bot name with 3-30 character limit",
+        "Validate alphanumeric + hyphen only format",
+        "Real-time validation showing error for invalid format or existing name",
+        "Next button disabled until valid name entered",
+        "Step indicator showing 'Step 1 of 4'",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill - screenshots: empty input, invalid name error, valid name state"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Build Step 2 - Telegram Configuration",
+      "description": "As a user, I want to connect my Telegram bot with a masked token input and helpful guidance.",
+      "acceptanceCriteria": [
+        "Password-masked input for Telegram bot token",
+        "Show/hide toggle button for token visibility",
+        "Help text with link to @BotFather instructions",
+        "Validate token format matches pattern: digits:alphanumeric",
+        "Back button returns to Step 1, Next proceeds to Step 3",
+        "Next button disabled until valid token format entered",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill - screenshots: masked state, revealed state, error state"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Build Step 3 - Security Passcode",
+      "description": "As a user, I want to set a passcode with an option to auto-generate a secure one.",
+      "acceptanceCriteria": [
+        "Input for passcode with 4-20 character limit",
+        "Show/hide toggle for passcode visibility",
+        "Dice icon button to generate random 8-character passcode",
+        "Explanatory text: 'Users must message this passcode to the bot before accessing it'",
+        "Back button returns to Step 2, Next proceeds to Step 4",
+        "Next button disabled until valid passcode length entered",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill - screenshots: empty input, generated passcode, revealed state"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Build Step 4 - Review and Launch",
+      "description": "As a user, I want to review my configuration and see credit costs before launching my bot.",
+      "acceptanceCriteria": [
+        "Summary card displaying: Minion avatar+name, bot name, Telegram status, masked passcode with reveal toggle",
+        "Credit cost breakdown: hourly rate (95 credits/hour), current balance, estimated runtime",
+        "Yellow warning banner when balance < 2 hours of runtime",
+        "Back button returns to Step 3",
+        "Launch Bot primary button with loading state during API call",
+        "Error message display if API call fails",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill - screenshots: sufficient credits, low balance warning, loading state"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Integrate modal with CharacterSelector",
+      "description": "As a user, clicking HIRE on any Minion should open the creation modal with proper data flow.",
+      "acceptanceCriteria": [
+        "Replace hireMinion event dispatch in CharacterSelector with modal open",
+        "Pass selected Minion data (id, name, color) to modal",
+        "Modal uses Minion color as accent throughout",
+        "On successful launch: close modal and show success toast notification",
+        "On API error: display error in modal, stay on review step",
+        "Reset form state when modal reopens",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill - record E2E video: HIRE click through all steps to launch"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Implement responsive mobile experience",
+      "description": "As a mobile user, I want the modal to be fully functional on my phone with touch-friendly interactions.",
+      "acceptanceCriteria": [
+        "Full-screen modal on mobile (< 768px viewport)",
+        "All tap targets minimum 44x44px",
+        "Bottom-fixed action buttons on mobile viewport",
+        "Sticky header with back/close on mobile",
+        "Scrollable content area when content exceeds viewport",
+        "Proper viewport meta tag for mobile scaling",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill - screenshots all 4 steps at 375x812 and 768x1024 viewports"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Create Playwright test suite",
+      "description": "As a developer, I need automated tests to verify the modal works correctly across all scenarios.",
+      "acceptanceCriteria": [
+        "Create tests/vm-creation-modal.spec.ts",
+        "Test: Modal opens from HIRE button click",
+        "Test: Navigation between all 4 steps (Next/Back)",
+        "Test: Form validation on each step",
+        "Test: Full happy path submission with mocked API",
+        "Test: Error handling on API failure",
+        "Screenshots captured for visual regression baseline",
+        "Typecheck passes",
+        "All Playwright tests pass"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
