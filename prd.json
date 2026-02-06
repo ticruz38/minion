@@ -36,8 +36,8 @@
         "Verify in browser using dev-browser skill - screenshot desktop (1280x720) and mobile (375x812)"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented with backdrop blur, scale/fade animations, confirmation dialog for dirty form, SSR-safe window access"
     },
     {
       "id": "US-003",

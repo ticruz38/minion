@@ -21,13 +21,15 @@ src/
 ├── lib/
 │   ├── components/          # Reusable Svelte components
 │   │   ├── MinionAvatar3D.svelte    # Three.js 3D character renderer
-│   │   └── CharacterSelector.svelte # Video game-style character picker
+│   │   ├── CharacterSelector.svelte # Video game-style character picker
+│   │   └── VMCreationModal.svelte   # Multi-step VM creation modal
 │   └── server/
 │       └── auth.ts          # Server-side auth session management
 ├── routes/
 │   ├── +page.svelte         # Homepage with hero + character selector
 │   ├── auth/callback/       # OAuth callback page
-│   └── api/auth/            # Auth endpoints (init, callback, notify)
+│   ├── api/auth/            # Auth endpoints (init, callback, notify)
+│   └── api/vms/             # VM creation endpoint
 ├── app.html                 # HTML template
 └── app.css                  # Global styles + CSS variables
 ```
@@ -83,6 +85,27 @@ onDestroy(() => {
 });
 ```
 
+### SSR-Safe Browser APIs
+**CRITICAL:** SvelteKit renders on the server where `window` and `document` don't exist.
+
+Always guard browser-only code:
+```typescript
+onMount(() => {
+  // This only runs in browser, safe to use window
+  if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', handler);
+  }
+  
+  return () => {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('keydown', handler);
+    }
+  };
+});
+```
+
+**Never access `window`/`document` at module level or during SSR** - it will cause 500 errors.
+
 ---
 
 ## Environment Variables
@@ -118,6 +141,24 @@ docker push ticruz38/minion:amd64
 - Uses `MinionAvatar3D.svelte` for rendering
 - Supports keyboard navigation (← → Enter) and touch swipes
 - Mobile has different UI (single avatar + thumbnails vs 3D carousel)
+- **Hire button** dispatches `hireMinion` custom event with selected minion data
+
+### VM Creation Modal
+- Located in `src/lib/components/VMCreationModal.svelte`
+- Multi-step modal for configuring and launching VM bots
+- Uses Svelte transitions (`fade`, `scale`) for smooth animations
+- Props: `isOpen`, `selectedMinion` (with `id`, `name`, `color`)
+- Events: `on:close`, `on:success`
+- Full-screen overlay with `backdrop-filter: blur(12px)`
+- Mobile: full viewport height with bottom-fixed action buttons
+- Tracks form dirty state for close confirmation
+
+### VM Creation Flow
+1. User clicks **HIRE** on a Minion → `hireMinion` event dispatched
+2. Modal opens with selected Minion data
+3. User configures bot (steps 1-4, implemented in US-003 to US-006)
+4. On success: modal closes and shows success notification
+5. API POST `/api/vms` publishes to Redis `clawd:commands` channel
 
 ### Authentication Flow
 1. User clicks "Connect" → backend creates session
@@ -190,5 +231,6 @@ docker push ticruz38/minion:amd64
 
 2025-02-05 - Added 3D character selector, mobile responsiveness, GitHub Actions  
 2025-02-05 - OAuth tokens now returned in API responses for external bot integration
+2025-02-06 - Added VMCreationModal component, VM creation API endpoint, SSR-safe patterns
 
 **Maintainers:** Update this date when modifying this file.

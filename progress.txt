@@ -8,6 +8,11 @@
 - Redis client is initialized lazily (singleton pattern)
 - Use SvelteKit's `json()` helper for responses
 - Use `@sveltejs/kit` `error` helper for HTTP errors
+- **Always use `typeof window !== 'undefined'` checks when accessing `window` in components** - SvelteKit SSR will fail otherwise
+- Use `onMount` for client-side only code like event listeners
+- **Modal patterns**: Use Svelte transitions (`fade`, `scale`) for smooth open/close animations
+- **CSS backdrop-filter**: Use `backdrop-filter: blur()` with `-webkit-backdrop-filter` fallback for modal overlays
+- **Svelte custom events**: Use `createEventDispatcher` for parent-child communication
 
 ---
 
@@ -36,4 +41,33 @@ Started: Fri Feb  6 04:21:26 PM CET 2026
 - API responses follow `{ success: boolean, message: string, ...data }` pattern
 - Environment variables like REDIS_URL should be checked and handled gracefully
 - Redis client uses lazy singleton pattern for connection management
+---
+
+## 2026-02-06T17:00:00+01:00 - US-002
+- Created VMCreationModal.svelte in src/lib/components/
+- Implemented full-screen overlay with backdrop blur effect (`backdrop-filter: blur(12px)`)
+- Added click-outside and X button to close modal with dirty form confirmation
+- Implemented Escape key handler to close modal (with SSR-safe `typeof window` check)
+- Added scale + fade animations using Svelte transitions (`fade`, `scale` with `cubicOut` easing)
+- Exported props: `isOpen`, `selectedMinion`, `onClose`, `onSuccess` events
+- Integrated modal with CharacterSelector via `hireMinion` custom event
+- Added confirmation dialog when form has unsaved changes
+- Implemented mobile-responsive design (full-screen on mobile < 768px)
+- Fixed SSR issue: Added `typeof window !== 'undefined'` checks in onMount/onDestroy
+- Typecheck passes (0 errors, 1 pre-existing warning)
+- Browser verification passed with Playwright:
+  - Desktop (1280x720): Modal opens/closes correctly
+  - Mobile (375x812): Full-screen modal works correctly
+- Files changed:
+  - src/lib/components/VMCreationModal.svelte (new)
+  - src/routes/+page.svelte (integrated modal)
+
+**Learnings for future iterations:**
+- **Critical**: When accessing `window` or `document` in SvelteKit, always wrap in `typeof window !== 'undefined'` check or put inside `onMount`
+- SSR runs on the server where `window` doesn't exist - causes 500 errors if not handled
+- Use Svelte's `createEventDispatcher` for child-to-parent communication (onClose, onSuccess events)
+- The `three.js` canvas from MinionAvatar3D can intercept pointer events during testing - use specific selectors
+- For modals: `backdrop-filter: blur()` needs `-webkit-backdrop-filter` for Safari support
+- Mobile modals should use `height: 100vh` and `border-radius: 0` for true full-screen feel
+- Use CSS custom properties (`--minion-color`) for dynamic theming based on selected minion
 ---
