@@ -354,3 +354,66 @@
 • Used WriteFile (progress.txt)
 • Now let me commit the changes:
 • Now let me commit the changes:
+• Used Shell (cd /root/code/minion && g...ep 4 - Review and Launch")
+• The commit is complete. Now let me check the PRD to see if there are any more stories with passes: false:
+• Let me verify the PRD update:
+• Used Grep ("passes":)
+• I've successfully marked US-006 as complete. Now looking at the remaining stories:
+
+  • US-007: Integrate modal with CharacterSelector (passes: false, priority: 7)
+  • US-008: Implement responsive mobile experience (passes: false, priority: 8)
+  • US-009: Create Playwright test suite (passes: false, priority: 9)
+
+  Since I've completed US-006 and there are still more stories with passes: false, I should end my response norm
+  ally (not with COMPLETE) so the next iteration can pick up the next story (US-007).
+
+  Let me verify the commit went through and provide a summary.
+• Used Shell (cd /root/code/minion && git log --oneline -3)
+• The commit is complete. Now let me provide a summary of what was done for US-006. Since there are still storie
+  s with passes: false (US-007, US-008, US-009), I should end my response normally, not with COMPLETE.
+• US-006 Complete: Build Step 4 - Review and Launch
+
+  Summary
+
+  Verified and completed the implementation of Step 4 (Review and Launch) in the VMCreationModal component. The
+  step was already implemented in the codebase, and I verified all acceptance criteria are met.
+
+  What was implemented:
+
+  1. Summary Card
+    • Minion avatar and name display
+    • Bot name configuration
+    • Telegram connection status (● Connected)
+    • Masked passcode with reveal toggle
+  2. Credit Cost Breakdown
+    • Hourly rate: 95 credits/hour
+    • Current balance display (500 credits mock)
+    • Estimated runtime calculation (~5 hours)
+  3. Low Balance Warning
+    • Yellow warning banner when balance < 2 hours runtime (< 190 credits)
+    • Warning icon and message
+  4. Action Buttons
+    • "Back" button returns to Step 3
+    • "Launch Bot" primary button with minion color accent
+    • Loading spinner animation during API call
+    • Disabled state while launching
+  5. Error Handling
+    • Error message display if API call fails
+    • Stays on review step on error
+
+  Quality Checks:
+
+  • ✅ Typecheck passes (0 errors)
+  • ✅ Build passes
+  • ✅ Browser verification with Playwright screenshots
+
+  Files Changed:
+
+  • prd.json - Marked US-006 as complete
+  • progress.txt - Added progress log entry
+
+  Remaining Stories:
+
+  • US-007: Integrate modal with CharacterSelector (priority 7)
+  • US-008: Implement responsive mobile experience (priority 8)
+  • US-009: Create Playwright test suite (priority 9)

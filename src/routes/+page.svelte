@@ -2,18 +2,18 @@
   import { onMount } from 'svelte';
   import CharacterSelector from '$lib/components/CharacterSelector.svelte';
   import VMCreationModal from '$lib/components/VMCreationModal.svelte';
+  import { fade, scale } from 'svelte/transition';
 
   let showSelector = false;
   let hiringMinion: { id: string; name: string; color: string } | null = null;
   let isModalOpen = false;
+  
+  // Toast notification state
+  let showToast = false;
+  let toastMessage = '';
+  let toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
   onMount(() => {
-    // Check for hire event from CharacterSelector
-    window.addEventListener('hireMinion', ((e: CustomEvent) => {
-      hiringMinion = e.detail;
-      isModalOpen = true;
-    }) as EventListener);
-
     // Entrance animation
     setTimeout(() => {
       showSelector = true;
@@ -24,14 +24,46 @@
     document.getElementById('character-select')?.scrollIntoView({ behavior: 'smooth' });
   }
 
+  function handleHireMinion(event: CustomEvent<{ id: string; name: string; color: string }>) {
+    hiringMinion = event.detail;
+    isModalOpen = true;
+  }
+
   function handleModalClose() {
     isModalOpen = false;
+    // Reset hiring minion after modal closes (allowing animation to finish)
+    setTimeout(() => {
+      hiringMinion = null;
+    }, 300);
+  }
+
+  function showSuccessToast(message: string) {
+    // Clear any existing toast timeout
+    if (toastTimeout) {
+      clearTimeout(toastTimeout);
+    }
+    
+    toastMessage = message;
+    showToast = true;
+    
+    // Auto-hide toast after 5 seconds
+    toastTimeout = setTimeout(() => {
+      showToast = false;
+    }, 5000);
   }
 
   function handleModalSuccess() {
-    // TODO: Handle successful bot creation (US-007)
+    // Show success toast notification
+    const minionName = hiringMinion?.name || 'Bot';
+    showSuccessToast(`${minionName} is being deployed! Your bot will be ready shortly.`);
+    
+    // Close the modal
     isModalOpen = false;
-    alert('Bot creation flow will continue in future stories!');
+    
+    // Reset hiring minion after modal closes
+    setTimeout(() => {
+      hiringMinion = null;
+    }, 300);
   }
 </script>
 
@@ -94,7 +126,7 @@
 
   <!-- Character Selector Section -->
   <section id="character-select" class="selector-section">
-    <CharacterSelector />
+    <CharacterSelector on:hire={handleHireMinion} />
   </section>
 
   <!-- VM Creation Modal -->
@@ -104,6 +136,31 @@
     on:close={handleModalClose}
     on:success={handleModalSuccess}
   />
+
+  <!-- Success Toast Notification -->
+  {#if showToast}
+    <div 
+      class="toast-notification"
+      style="--minion-color: {hiringMinion?.color || '#10b981'}"
+      in:scale={{ duration: 300, start: 0.9 }}
+      out:fade={{ duration: 200 }}
+    >
+      <div class="toast-icon">🚀</div>
+      <div class="toast-content">
+        <p class="toast-message">{toastMessage}</p>
+      </div>
+      <button 
+        class="toast-close"
+        on:click={() => showToast = false}
+        aria-label="Close notification"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  {/if}
 
   <!-- How It Works -->
   <section id="how-it-works" class="how-it-works">
@@ -689,6 +746,76 @@
   .footer-bottom p {
     color: rgba(255,255,255,0.3);
     font-size: 0.875rem;
+  }
+
+  /* Toast Notification */
+  .toast-notification {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 1rem 1.25rem;
+    background: linear-gradient(135deg, rgba(26, 26, 37, 0.95) 0%, rgba(18, 18, 26, 0.95) 100%);
+    border: 1px solid var(--minion-color, #10b981);
+    border-radius: 16px;
+    box-shadow: 
+      0 20px 40px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(255, 255, 255, 0.05),
+      0 0 30px var(--minion-color, #10b981) 20%;
+    z-index: 2000;
+    max-width: 400px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .toast-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  .toast-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .toast-message {
+    margin: 0;
+    font-size: 0.9375rem;
+    color: white;
+    line-height: 1.5;
+  }
+
+  .toast-close {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .toast-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  @media (max-width: 768px) {
+    .toast-notification {
+      top: auto;
+      bottom: 1.5rem;
+      left: 1rem;
+      right: 1rem;
+      max-width: none;
+    }
   }
 
   /* Responsive */

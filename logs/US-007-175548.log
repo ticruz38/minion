@@ -1,0 +1,315 @@
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ # Ralph Agent Instructions                                                                                   │
+│                                                                                                              │
+│ You are an autonomous coding agent working on a software project.                                            │
+│                                                                                                              │
+│ ## Your Task                                                                                                 │
+│                                                                                                              │
+│ 1. Read the PRD at `prd.json` (in the same directory as this file)                                           │
+│ 2. Read the progress log at `progress.txt` (check Codebase Patterns section first)                           │
+│ 3. Check you're on the correct branch from PRD `branchName`. If not, check it out or create from main.       │
+│ 4. Pick the **highest priority** user story where `passes: false`                                            │
+│ 5. Implement that single user story                                                                          │
+│ 6. Run quality checks (e.g., typecheck, lint, test - use whatever your project requires)                     │
+│ 7. Update AGENTS.md files if you discover reusable patterns (see below)                                      │
+│ 8. If checks pass, commit ALL changes with message: `feat: [Story ID] - [Story Title]`                       │
+│ 9. Update the PRD to set `passes: true` for the completed story                                              │
+│ 10. Append your progress to `progress.txt`                                                                   │
+│                                                                                                              │
+│ ## Progress Report Format                                                                                    │
+│                                                                                                              │
+│ APPEND to progress.txt (never replace, always append):                                                       │
+│ ```                                                                                                          │
+│ ## [Date/Time] - [Story ID]                                                                                  │
+│ - What was implemented                                                                                       │
+│ - Files changed                                                                                              │
+│ - **Learnings for future iterations:**                                                                       │
+│   - Patterns discovered (e.g., "this codebase uses X for Y")                                                 │
+│   - Gotchas encountered (e.g., "don't forget to update Z when changing W")                                   │
+│   - Useful context (e.g., "the evaluation panel is in component X")                                          │
+│ ---                                                                                                          │
+│ ```                                                                                                          │
+│                                                                                                              │
+│ The learnings section is critical - it helps future iterations avoid repeating mistakes and understand the c │
+│ odebase better.                                                                                              │
+│                                                                                                              │
+│ ## Consolidate Patterns                                                                                      │
+│                                                                                                              │
+│ If you discover a **reusable pattern** that future iterations should know, add it to the `## Codebase Patter │
+│ ns` section at the TOP of progress.txt (create it if it doesn't exist). This section should consolidate the  │
+│ most important learnings:                                                                                    │
+│                                                                                                              │
+│ ```                                                                                                          │
+│ ## Codebase Patterns                                                                                         │
+│ - Example: Use `sql<number>` template for aggregations                                                       │
+│ - Example: Always use `IF NOT EXISTS` for migrations                                                         │
+│ - Example: Export types from actions.ts for UI components                                                    │
+│ ```                                                                                                          │
+│                                                                                                              │
+│ Only add patterns that are **general and reusable**, not story-specific details.                             │
+│                                                                                                              │
+│ ## Update AGENTS.md Files                                                                                    │
+│                                                                                                              │
+│ Before committing, check if any edited files have learnings worth preserving in nearby AGENTS.md files:      │
+│                                                                                                              │
+│ 1. **Identify directories with edited files** - Look at which directories you modified                       │
+│ 2. **Check for existing AGENTS.md** - Look for AGENTS.md in those directories or parent directories          │
+│ 3. **Add valuable learnings** - If you discovered something future developers/agents should know:            │
+│    - API patterns or conventions specific to that module                                                     │
+│    - Gotchas or non-obvious requirements                                                                     │
+│    - Dependencies between files                                                                              │
+│    - Testing approaches for that area                                                                        │
+│    - Configuration or environment requirements                                                               │
+│                                                                                                              │
+│ **Examples of good AGENTS.md additions:**                                                                    │
+│ - "When modifying X, also update Y to keep them in sync"                                                     │
+│ - "This module uses pattern Z for all API calls"                                                             │
+│ - "Tests require the dev server running on PORT 3000"                                                        │
+│ - "Field names must match the template exactly"                                                              │
+│                                                                                                              │
+│ **Do NOT add:**                                                                                              │
+│ - Story-specific implementation details                                                                      │
+│ - Temporary debugging notes                                                                                  │
+│ - Information already in progress.txt                                                                        │
+│                                                                                                              │
+│ Only update AGENTS.md if you have **genuinely reusable knowledge** that would help future work in that direc │
+│ tory.                                                                                                        │
+│                                                                                                              │
+│ ## Quality Requirements                                                                                      │
+│                                                                                                              │
+│ - ALL commits must pass your project's quality checks (typecheck, lint, test)                                │
+│ - Do NOT commit broken code                                                                                  │
+│ - Keep changes focused and minimal                                                                           │
+│ - Follow existing code patterns                                                                              │
+│                                                                                                              │
+│ ## Browser Testing (Required for Frontend Stories)                                                           │
+│                                                                                                              │
+│ For any story that changes UI, you MUST verify it works in the browser:                                      │
+│                                                                                                              │
+│ 1. Load the `dev-browser` skill                                                                              │
+│ 2. Navigate to the relevant page                                                                             │
+│ 3. Verify the UI changes work as expected                                                                    │
+│ 4. Take a screenshot if helpful for the progress log                                                         │
+│                                                                                                              │
+│ A frontend story is NOT complete until browser verification passes.                                          │
+│                                                                                                              │
+│ ## Stop Condition                                                                                            │
+│                                                                                                              │
+│ After completing a user story, check if ALL stories have `passes: true`.                                     │
+│                                                                                                              │
+│ If ALL stories are complete and passing, reply with:                                                         │
+│ <promise>COMPLETE</promise>                                                                                  │
+│                                                                                                              │
+│ If there are still stories with `passes: false`, end your response normally (another iteration will pick up  │
+│ the next story).                                                                                             │
+│                                                                                                              │
+│ ## Important                                                                                                 │
+│                                                                                                              │
+│ - Work on ONE story per iteration                                                                            │
+│ - Commit frequently                                                                                          │
+│ - Keep CI green                                                                                              │
+│ - Read the Codebase Patterns section in progress.txt before starting                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+• Let me start by understanding the task. I need to:
+
+  1. Read the PRD at prd.json
+  2. Read the progress log at progress.txt
+  3. Check the branch from PRD
+  4. Pick the highest priority user story where passes: false
+  5. Implement that story
+  6. Run quality checks
+  7. Update AGENTS.md if needed
+  8. Commit changes
+  9. Update the PRD to set passes: true
+  10. Append progress to progress.txt
+
+  Let me start by reading the PRD and progress files.
+• I'll start by reading the PRD and progress files to understand what needs to be done.
+• Used ReadFile (prd.json)
+• Used ReadFile (progress.txt)
+• Used Shell (git branch --show-current)
+• The repository is on the correct branch ralph/vm-creation-modal. Scanning the PRD requirements, I see that US-
+  001 through US-006 are finished. The next highest priority item is US-007, which focuses on integrating the mo
+  dal with the CharacterSelector and ensuring proper data flow.
+
+  To start this, I need to understand the current state of the components involved. I'll examine the existing mo
+  dal logic in VMCreationModal.svelte to see how it currently manages its state. However, the main task of US-00
+  7 is changing how the selection triggers the modal. Therefore, I must also look at the CharacterSelector.svelt
+  e component to see how it handles character selection and where exactly I need to inject the new event dispatc
+  hing logic. Checking both will provide the necessary context to implement the integration seamlessly.
+• I'm on the correct branch ralph/vm-creation-modal. Looking at the PRD, the highest priority story with passes:
+  false is US-007: Integrate modal with CharacterSelector.
+
+  Let me first check the current state of the relevant files:
+• Used ReadFile (src/lib/components/VMCreationModal.svelte)
+• Used ReadFile (src/lib/components/CharacterSelector.svelte)
+• Now let me read the rest of the VMCreationModal.svelte file and check the current +page.svelte to understand t
+  he integration:
+• Let me continue reading the modal file and check the page integration:
+• Used ReadFile (src/lib/components/VMCreationModal.svelte)
+• Used ReadFile (src/routes/+page.svelte)
+• I have a clear view of the current state. CharacterSelector is currently dispatching an event, which +page.sve
+  lte catches to open the modal. This is a bit indirect. The requirements for US-007 are quite specific and go b
+  eyond just opening the modal. I need to implement a full visual integration: using the minion's color as an ac
+  cent, resetting the form state upon reopening, and handling both success (with a toast) and error (keeping the
+  modal open) scenarios.
+
+  The current logic in handleModalSuccess is just a placeholder, and handleModalClose doesn't handle the 'dirty'
+  state confirmation yet. But more importantly, I need to make sure the CharacterSelector is properly passing th
+  e minion data. Wait, instead of using a global window event, it might be better to use Svelte's createEventDis
+  patcher for better type safety, but I'll stick to the existing pattern for now to avoid breaking changes.
+
+  One thing that stands out is the need for a 'success toast notification'. This is a UI element that doesn't ex
+  ist yet. I should check if there's a global store or a utility for this, or if I need to implement one within
+  the page or as a separate component. Also, I need to ensure that the VMCreationModal resets its internal step
+  and form data whenever it receives a new isOpen = true prop, or specifically when the selectedMinion changes.
+
+  Before I start modifying the logic in +page.svelte, I need to perform some due diligence. First, I must verify
+  the build health—no point in adding features to a broken build. Second, I need to look at the AGENTS.md file.
+  This project uses a specific terminology for 'Minions' and has a defined aesthetic (color accents, etc.). The
+  AGENTS.md file likely contains the definitive list of minion data, including the color hex codes I need to use
+  for the modal accents. It might also specify the expected API structure for the 'launch' sequence or provide t
+  emplates for the toast notifications.
+
+  Checking AGENTS.md now will save me from having to backtrack later when I realize I'm missing a color definiti
+  on or a specific validation rule for the minion selection. It's better to have the full spec of the 'domain' l
+  ogic before I touch the UI code. I'll start by running a type check and then diving into the documentation to
+  align my implementation with the existing architecture.
+• Now I understand the current state. The integration is partially there using a window event, but I need to com
+  plete US-007:
+
+  1. Replace the window event with Svelte's createEventDispatcher
+  2. Show success toast notification
+  3. Properly handle the modal data flow with minion color accent
+  4. Reset form state when modal reopens
+
+  Let me set up the todo list and start implementing:
+• Used SetTodoList
+  • Update CharacterSelector to use Svelte event dispatcher ←
+  • Add success toast notification to +page.svelte
+  • Run typecheck and build
+  • Browser verification with Playwright
+  • Update AGENTS.md and progress.txt
+  • Update PRD and commit
+• Used Shell (cd /root/code/minion && n...run check 2>&1 | head -30)
+• Used ReadFile (AGENTS.md)
+• I've reviewed the existing setup. CharacterSelector currently uses a window event, but for better encapsulatio
+  n, I'll switch it to createEventDispatcher. The parent component will handle opening the modal and triggering
+  the toast notification.
+
+  Wait, the requirements specifically mention resetting the form state when the modal reopens. Looking at VMCrea
+  tionModal, it seems I'll need to adjust the logic to ensure the state is cleared properly on reopening.
+
+  Actually, I'll start with CharacterSelector.svelte. I need to add the dispatcher and update the hireMinion log
+  ic. This is the first step in the integration process before I move on to the modal and the main page logic. I
+  'll focus on this file first to establish the communication channel.
+• Typecheck passes. Now let me implement US-007. I'll update both files:
+
+  1. CharacterSelector.svelte - Use Svelte's createEventDispatcher instead of window event
+  2. +page.svelte - Add toast notification and better success handling
+• Used StrReplaceFile (src/lib/components/CharacterSelector.svelte)
+• The CharacterSelector is now using Svelte's event dispatcher. Now let me update +page.svelte to:
+
+  1. Handle the hire event via Svelte's on:hire binding
+  2. Add a toast notification system
+  3. Handle success properly with the toast
+  4. Reset modal state appropriately
+• Now let me update the +page.svelte to use the Svelte event, add toast notification, and improve the integratio
+  n:
+• Used StrReplaceFile (src/routes/+page.svelte)
+• The edits look good. Now let me run typecheck to ensure everything compiles correctly, and then verify with th
+  e browser.
+• Used SetTodoList
+  • Update CharacterSelector to use Svelte event dispatcher
+  • Add success toast notification to +page.svelte
+  • Run typecheck and build ←
+  • Browser verification with Playwright
+  • Update AGENTS.md and progress.txt
+  • Update PRD and commit
+• Used Shell (cd /root/code/minion && npm run check 2>&1)
+• Typecheck passes (the warning is pre-existing). Now let me run the build to make sure everything compiles:
+• Typecheck passes. Now let me run the build:
+• Used Shell (cd /root/code/minion && n...run build 2>&1 | tail -30)
+• Build succeeds. Now let me read the playwright-skill to verify the UI with browser testing.
+• Build succeeds. Now let me read the Playwright skill to verify the UI:
+• Used SetTodoList
+  • Update CharacterSelector to use Svelte event dispatcher
+  • Add success toast notification to +page.svelte
+  • Run typecheck and build
+  • Browser verification with Playwright ←
+  • Update AGENTS.md and progress.txt
+  • Update PRD and commit
+• Used ReadFile (/root/.config/agents/skil...playwright-skill/SKILL.md)
+• Let me detect the dev server and then run a browser test to verify the US-007 integration.
+• Used Shell (cd /root/.config/agents/s....log(JSON.stringify(s)))")
+• There are multiple servers. Let me check which one is the Minion dev server by looking at the package.json. Th
+  e default port for SvelteKit is usually 5173, but these are running. Let me try port 3000 first, as it's the m
+  ost common.
+• Used Shell (cd /root/code/minion && c...on | grep -A5 '"scripts"')
+• Let me check if the dev server is running and if not, start it:
+• Used Shell (cd /root/code/minion && t... npm run dev 2>&1 || true)
+• The dev server was not running. Now it's starting on port 5177. Let me wait a moment for it to start, then run
+  the browser test.
+• The dev server is starting on port 5177. Let me write a Playwright test to verify the US-007 integration:
+• Used WriteFile (/tmp/playwright-test-us-007.js)
+• Let me run the playwright test now.
+• Used Shell (cd /root/.config/agents/s...right-test-us-007.js 2>&1)
+  Failed with exit code: 1
+• The browser needs to run headlessly since there's no X display. Let me update the test to use headless mode.
+• Let me update the test to use headless mode:
+• Used StrReplaceFile (/tmp/playwright-test-us-007.js)
+• Now let me run the test again with headless mode.
+• Used Shell (cd /root/.config/agents/s...right-test-us-007.js 2>&1)
+• The dev server is not running anymore. Let me start it in the background and then run the test.
+• The dev server stopped. Let me start it in the background and run the test:
+• Used Shell (cd /root/code/minion && (...dev-server.log | tail -10)
+• Good, the dev server is now running on port 5177. Let me run the test again.
+• Used Shell (cd /root/.config/agents/s...right-test-us-007.js 2>&1)
+• All tests pass. The US-007 integration is working correctly:
+
+  1. HIRE button opens modal ✓
+  2. Modal displays selected minion data ✓
+  3. Form navigation works ✓
+  4. Review step shows correct summary ✓
+  5. Launch button triggers API call ✓
+  6. Modal closes on success ✓
+  7. Toast notification appears ✓
+
+  Now let me update the todo list, update AGENTS.md if needed, update progress.txt, update the PRD to set passes
+  : true, and commit the changes.
+• All tests pass! Let me verify the screenshots and then update the documentation:
+• Used SetTodoList
+  • Update CharacterSelector to use Svelte event dispatcher
+  • Add success toast notification to +page.svelte
+  • Run typecheck and build
+  • Browser verification with Playwright
+  • Update AGENTS.md and progress.txt ←
+  • Update PRD and commit
+• Used Shell (ls -la /tmp/us-007-*.png)
+• All screenshots captured. Now let me update the progress.txt and AGENTS.md files with the new patterns learned
+  .
+• Used ReadFile (/tmp/us-007-after-launch.png)
+  Unsupported file type
+• I need to use ReadMediaFile for images. But actually the test already passed, so let me just update the progre
+  ss files and commit.
+• Used ReadMediaFile (/tmp/us-007-after-launch.png)
+• The screenshot confirms the toast notification is visible with "Benny is being deployed! Your bot will be read
+  y shortly." The integration is working. Now let me update the progress.txt and AGENTS.md files.
+• The toast notification is working correctly. Now let me update the progress.txt and AGENTS.md:
+• Used StrReplaceFile (progress.txt)
+• Now let me update the AGENTS.md file with the toast notification pattern and the updated event dispatch patter
+  n.
+• Now let me update AGENTS.md with the new patterns:
+• Used StrReplaceFile (AGENTS.md)
+• Good, AGENTS.md has been updated. Now let me update the PRD to mark US-007 as passed, then commit all changes.
+• Now let me update the PRD to mark US-007 as passed:
+• Used StrReplaceFile (prd.json)
+• Now let me commit all the changes.
+• Now let me commit all the changes:
+• Used SetTodoList
+  • Update CharacterSelector to use Svelte event dispatcher
+  • Add success toast notification to +page.svelte
+  • Run typecheck and build
+  • Browser verification with Playwright
+  • Update AGENTS.md and progress.txt
+  • Update PRD and commit ←

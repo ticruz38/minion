@@ -154,10 +154,10 @@ docker push ticruz38/minion:amd64
 - Tracks form dirty state for close confirmation
 
 ### VM Creation Flow
-1. User clicks **HIRE** on a Minion → `hireMinion` event dispatched
-2. Modal opens with selected Minion data
-3. User configures bot (steps 1-4, implemented in US-003 to US-006)
-4. On success: modal closes and shows success notification
+1. User clicks **HIRE** on a Minion → `hire` event dispatched via Svelte's `createEventDispatcher`
+2. Modal opens with selected Minion data (id, name, color)
+3. User configures bot through 4 steps (name, Telegram token, passcode, review)
+4. On successful launch: modal closes and shows success toast notification with minion name
 5. API POST `/api/vms` publishes to Redis `clawd:commands` channel
 
 ### Authentication Flow
@@ -232,5 +232,6 @@ docker push ticruz38/minion:amd64
 2025-02-05 - Added 3D character selector, mobile responsiveness, GitHub Actions  
 2025-02-05 - OAuth tokens now returned in API responses for external bot integration
 2025-02-06 - Added VMCreationModal component, VM creation API endpoint, SSR-safe patterns
+2025-02-06 - US-007: Integrated modal with CharacterSelector, added toast notification system
 
 **Maintainers:** Update this date when modifying this file.

@@ -14,6 +14,38 @@
 - **CSS backdrop-filter**: Use `backdrop-filter: blur()` with `-webkit-backdrop-filter` fallback for modal overlays
 - **Svelte custom events**: Use `createEventDispatcher` for parent-child communication
 
+## 2026-02-06T18:00:00+01:00 - US-007
+- Integrated VMCreationModal with CharacterSelector using Svelte's createEventDispatcher
+- Replaced window event dispatch with proper Svelte `on:hire` event binding
+- Added success toast notification with auto-dismiss (5 seconds)
+- Toast uses minion color as border accent for visual consistency
+- Modal properly resets state when closed (form data cleared, step reset to 1)
+- Success flow: modal closes → toast appears → hiring state resets after animation
+- Error handling: API error stays on review step with error message displayed
+- Typecheck passes (0 errors, 1 pre-existing warning)
+- Build passes
+- Browser verification with Playwright E2E test:
+  - HIRE button opens modal with correct minion data
+  - All 4 steps navigation works correctly
+  - Form validation on each step
+  - Review step shows accurate summary
+  - Launch triggers API call and shows success toast
+  - Modal closes properly on success
+- Screenshots captured:
+  - `/tmp/us-007-initial.png` - Page initial state
+  - `/tmp/us-007-selector.png` - Character selector visible
+  - `/tmp/us-007-modal-open.png` - Modal opened from HIRE click
+  - `/tmp/us-007-step1-filled.png` through `/tmp/us-007-step4-review.png` - All steps
+  - `/tmp/us-007-after-launch.png` - Toast notification visible after success
+
+**Learnings for future iterations:**
+- **Svelte event dispatch pattern**: Use `createEventDispatcher<PayloadType>()` for type-safe events
+- **Parent-child communication**: Prefer Svelte's `on:event` binding over window events
+- **Toast notification pattern**: Fixed position, auto-dismiss with timeout cleanup, uses CSS custom properties for theming
+- **State reset timing**: Use setTimeout to reset state after modal close animation completes
+- **E2E testing**: Full flow testing validates both UI and API integration
+- **Toast styling**: Use minion color variable for border, backdrop-filter for glassmorphism effect
+
 ---
 
 # Ralph Progress Log

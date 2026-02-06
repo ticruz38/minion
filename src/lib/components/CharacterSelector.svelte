@@ -1,6 +1,11 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, createEventDispatcher } from 'svelte';
   import MinionAvatar3D from './MinionAvatar3D.svelte';
+
+  // Event dispatcher for hire action
+  const dispatch = createEventDispatcher<{
+    hire: { id: string; name: string; color: string };
+  }>();
 
   interface Minion {
     id: string;
@@ -117,8 +122,12 @@
   }
 
   function hireMinion() {
-    const event = new CustomEvent('hireMinion', { detail: selectedMinion });
-    window.dispatchEvent(event);
+    // Dispatch Svelte event for proper parent-child communication
+    dispatch('hire', {
+      id: selectedMinion.id,
+      name: selectedMinion.name,
+      color: selectedMinion.color
+    });
   }
 
   // Touch/Swipe handlers for mobile
