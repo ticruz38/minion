@@ -167,20 +167,12 @@ docker push ticruz38/minion:amd64
 
 | ID | Name | Role | Color |
 |----|------|------|-------|
-| accountant | **Bean Counter Benny** | Accounting & bookkeeping | `#10b981` (Green) |
-| realtor | **Open House Owen** | Real estate scouting | `#f59e0b` (Orange) |
-| analyst | **Bear Market Barry** | Financial analysis | `#8b5cf6` (Purple) |
+| accountant | **Benny** | Accounting & bookkeeping | `#10b981` (Green) |
+| realtor | **Owen** | Real estate scouting | `#f59e0b` (Orange) |
+| analyst | **Barry** | Financial analysis | `#8b5cf6` (Purple) |
 | restaurant | **Sergio** | Restaurant management | `#ef4444` (Red) |
-| scheduler | **Time Lord Terry** | Calendar & scheduling | `#06b6d4` (Cyan) |
-| support | **Ticket Tim** | Customer support | `#ec4899` (Pink) |
-
-**Naming convention:** Each minion has a funny, memorable name related to their function:
-- Benny: Bean counter = accountant stereotype
-- Owen: Always at open houses
-- Barry: Bear market = Wall Street lingo
-- Sergio: Classic maître d' name
-- Terry: Time Lord (Dr. Who reference) for scheduling
-- Tim: Takes support tickets
+| scheduler | **Terry** | Calendar & scheduling | `#06b6d4` (Cyan) |
+| support | **Tim** | Customer support | `#ec4899` (Pink) |
 
 ### Update 3D avatar
 1. Edit `MinionAvatar3D.svelte`
