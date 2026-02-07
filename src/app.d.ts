@@ -6,6 +6,10 @@ declare global {
     // interface PageState {}
     // interface Platform {}
   }
+  
+  interface Window {
+    __TESTING__?: boolean;
+  }
 }
 
 export {};

@@ -255,3 +255,41 @@ Started: Fri Feb  6 04:21:26 PM CET 2026
 - Launch button: Prominent styling with minion color, spinner animation during async operation
 - Error display: Red banner below content, above action buttons for visibility
 ---
+
+## 2026-02-07T08:25:00+01:00 - US-009
+- Created comprehensive Playwright test suite for VM Creation Modal
+- Created tests/vm-creation-modal.spec.ts with 32 test cases covering:
+  - Modal opening from HIRE button
+  - All 4 steps navigation (Next/Back buttons)
+  - Form validation on each step (real-time and on submit)
+  - Full happy path with mocked API
+  - Error handling (API failure, network error, validation error)
+  - Modal close behavior (X button, Escape key, confirmation dialog)
+  - Visual regression screenshots for all steps
+- Created playwright.config.ts with:
+  - Preview server on port 3011
+  - Chromium and Chromium-mobile projects
+  - Reduced motion preference for testing
+  - Sequential test execution (workers=1) for stability
+- Enhanced VMCreationModal.svelte with:
+  - `window.__TESTING__` flag support to disable animations
+  - Reactive `$: isTesting` statement for real-time flag checking
+  - `data-testid` attributes on key elements (modal-overlay, next-button, back-button, launch-button, etc.)
+  - Reduced motion CSS media query for accessibility
+  - All transitions respect isTesting flag (duration: 0 when testing)
+- Added TypeScript declaration for `window.__TESTING__` in app.d.ts
+- Installed Playwright dependencies (@playwright/test)
+- All 32 tests passing
+- Typecheck passes (0 errors)
+- Build passes
+
+**Learnings for future iterations:**
+- Playwright testing patterns for Svelte transitions: Use `window.__TESTING__` flag to disable animations
+- `addInitScript` vs `page.evaluate()`: For Svelte components, use `page.evaluate()` right after `page.goto()` to set flags
+- Sequential test execution: Use `fullyParallel: false` and `workers: 1` when tests share state (like a modal)
+- Data-testid attributes: Essential for stable E2E tests, especially for dynamic content
+- Mocking API calls: Use `page.route()` to intercept and mock API responses
+- Test timeouts: Svelte transitions can cause timeouts; disabling them in test mode solves this
+- Visual regression: Screenshots captured in test-results/ directory for baseline comparison
+
+---

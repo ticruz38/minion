@@ -7,6 +7,10 @@
   // Props
   export let isOpen = false;
   export let selectedMinion: { id: string; name: string; color: string } | null = null;
+  
+  // Disable animations during testing for more reliable E2E tests
+  // Use a function to check at render time to catch test flag set after mount
+  $: isTesting = typeof window !== 'undefined' && (window as { __TESTING__?: boolean }).__TESTING__ === true;
 
   // Event dispatcher
   const dispatch = createEventDispatcher<{
@@ -301,15 +305,17 @@
     class="modal-overlay"
     bind:this={modalElement}
     on:click={handleBackdropClick}
-    transition:fade={{ duration: 200 }}
+    transition:fade={{ duration: isTesting ? 0 : 200 }}
+    data-testid="modal-overlay"
   >
     <div 
       class="modal-container"
       transition:scale={{ 
-        duration: 300, 
+        duration: isTesting ? 0 : 300, 
         start: 0.95, 
         easing: cubicOut 
       }}
+      data-testid="modal-container"
     >
       <!-- Header -->
       <div class="modal-header" style="--minion-color: {selectedMinion?.color || '#6366f1'}">
@@ -355,10 +361,10 @@
         {/if}
 
         <!-- Step Content -->
-        <div class="step-content">
+        <div class="step-content" data-testid="step-content">
           {#if currentStep === 1}
             <!-- Step 1: Name Your Bot -->
-            <div class="step-form" in:fade={{ duration: 200 }}>
+            <div class="step-form" in:fade={{ duration: isTesting ? 0 : 200 }}>
               <h3 class="step-title">Name Your Bot</h3>
               <p class="step-description">
                 Give your {selectedMinion?.name || 'bot'} a memorable name that you'll use to interact with it.
@@ -390,7 +396,7 @@
                   </span>
                 </div>
                 {#if botNameError}
-                  <span class="error-message" transition:fade={{ duration: 150 }}>
+                  <span class="error-message" transition:fade={{ duration: isTesting ? 0 : 150 }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <circle cx="12" cy="12" r="10"></circle>
                       <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -406,7 +412,7 @@
             </div>
           {:else if currentStep === 2}
             <!-- Step 2: Telegram Configuration -->
-            <div class="step-form" in:fade={{ duration: 200 }}>
+            <div class="step-form" in:fade={{ duration: isTesting ? 0 : 200 }}>
               <h3 class="step-title">Connect Telegram</h3>
               <p class="step-description">
                 Enter your Telegram bot token to enable messaging. Get one from @BotFather if you haven't already.
@@ -449,7 +455,7 @@
                   </button>
                 </div>
                 {#if tokenError}
-                  <span class="error-message" transition:fade={{ duration: 150 }}>
+                  <span class="error-message" transition:fade={{ duration: isTesting ? 0 : 150 }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <circle cx="12" cy="12" r="10"></circle>
                       <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -471,7 +477,7 @@
             </div>
           {:else if currentStep === 3}
             <!-- Step 3: Security Passcode -->
-            <div class="step-form" in:fade={{ duration: 200 }}>
+            <div class="step-form" in:fade={{ duration: isTesting ? 0 : 200 }}>
               <h3 class="step-title">Security Passcode</h3>
               <p class="step-description">
                 Set a passcode that users must send to your bot before they can access it.
@@ -536,7 +542,7 @@
                   </span>
                 </div>
                 {#if passcodeError}
-                  <span class="error-message" transition:fade={{ duration: 150 }}>
+                  <span class="error-message" transition:fade={{ duration: isTesting ? 0 : 150 }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <circle cx="12" cy="12" r="10"></circle>
                       <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -561,7 +567,7 @@
             </div>
           {:else if currentStep === 4}
             <!-- Step 4: Review and Launch -->
-            <div class="step-form" in:fade={{ duration: 200 }}>
+            <div class="step-form" in:fade={{ duration: isTesting ? 0 : 200 }}>
               <h3 class="step-title">Review and Launch</h3>
               <p class="step-description">
                 Review your configuration before launching your {selectedMinion?.name || 'bot'}.
@@ -646,7 +652,7 @@
                 </div>
                 
                 {#if isLowBalance}
-                  <div class="warning-banner" transition:fade={{ duration: 200 }}>
+                  <div class="warning-banner" transition:fade={{ duration: isTesting ? 0 : 200 }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
                       <line x1="12" y1="9" x2="12" y2="13"></line>
@@ -659,7 +665,7 @@
 
               <!-- Error Message -->
               {#if launchError}
-                <div class="launch-error" transition:fade={{ duration: 150 }}>
+                <div class="launch-error" transition:fade={{ duration: isTesting ? 0 : 150 }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="10"></circle>
                     <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -693,12 +699,13 @@
       </div>
 
       <!-- Footer -->
-      <div class="modal-footer">
+      <div class="modal-footer" data-testid="modal-footer">
         {#if currentStep > 1}
           <button 
             class="btn btn-secondary" 
             on:click={goToPreviousStep}
             disabled={isLaunching}
+            data-testid="back-button"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -707,7 +714,12 @@
             Back
           </button>
         {:else}
-          <button class="btn btn-secondary" on:click={handleCloseAttempt} disabled={isLaunching}>
+          <button 
+            class="btn btn-secondary" 
+            on:click={handleCloseAttempt} 
+            disabled={isLaunching}
+            data-testid="cancel-button"
+          >
             Cancel
           </button>
         {/if}
@@ -719,6 +731,7 @@
             style="--btn-color: {selectedMinion?.color || '#6366f1'}"
             on:click={handleLaunch}
             disabled={isLaunching}
+            data-testid="launch-button"
           >
             {#if isLaunching}
               <svg class="spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -740,6 +753,7 @@
             style="--btn-color: {selectedMinion?.color || '#6366f1'}"
             on:click={goToNextStep}
             disabled={(currentStep === 1 && !isStep1Valid) || (currentStep === 2 && !isStep2Valid) || (currentStep === 3 && !isStep3Valid)}
+            data-testid="next-button"
           >
             Next
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -755,20 +769,21 @@
     {#if showConfirmClose}
       <div 
         class="confirm-dialog-overlay"
-        transition:fade={{ duration: 150 }}
+        transition:fade={{ duration: isTesting ? 0 : 150 }}
+        data-testid="confirm-dialog"
       >
         <div 
           class="confirm-dialog"
-          transition:scale={{ duration: 200, start: 0.95 }}
+          transition:scale={{ duration: isTesting ? 0 : 200, start: 0.95 }}
         >
           <div class="confirm-icon">⚠️</div>
           <h3 class="confirm-title">Discard Changes?</h3>
           <p class="confirm-text">You have unsaved changes. Are you sure you want to close?</p>
           <div class="confirm-actions">
-            <button class="btn btn-secondary" on:click={cancelClose}>
+            <button class="btn btn-secondary" on:click={cancelClose} data-testid="keep-editing-button">
               Keep Editing
             </button>
-            <button class="btn btn-danger" on:click={confirmClose}>
+            <button class="btn btn-danger" on:click={confirmClose} data-testid="discard-button">
               Discard
             </button>
           </div>
@@ -1678,6 +1693,21 @@
     .modal-container {
       max-width: 500px;
       border-radius: 20px;
+    }
+  }
+
+  /* Reduced motion - disable animations for accessibility and testing */
+  @media (prefers-reduced-motion: reduce) {
+    .modal-overlay,
+    .modal-container,
+    .step-form,
+    .error-message,
+    .warning-banner,
+    .launch-error,
+    .confirm-dialog-overlay,
+    .confirm-dialog {
+      animation: none !important;
+      transition: none !important;
     }
   }
 </style>
