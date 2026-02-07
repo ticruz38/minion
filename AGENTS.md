@@ -171,6 +171,60 @@ docker push ticruz38/minion:amd64
 4. On successful launch: modal closes and shows success toast notification with minion name
 5. API POST `/api/vms` publishes to Redis `clawd:commands` channel
 
+### VM Creation API (Multi-Channel)
+Located at `src/routes/api/vms/+server.ts`
+
+**Request Schema:**
+```typescript
+POST /api/vms
+Content-Type: application/json
+
+{
+  id: string;              // Required: UUID v4 for Redis correlation
+  name: string;            // 3-30 chars, alphanumeric + hyphens
+  minionId: string;        // Selected minion type
+  channels: {              // At least one channel required
+    telegram?: {
+      enabled: true;
+      token: string;       // Format: digits:alphanumeric
+      dmPolicy: 'pairing' | 'allowlist' | 'open';
+      allowedUsers?: string[];
+    };
+    discord?: {
+      enabled: true;
+      token: string;
+      dmPolicy: 'pairing' | 'allowlist' | 'open';
+      allowedUsers?: string[];
+    };
+    whatsapp?: {
+      enabled: true;
+      phoneNumber: string; // E.164 format: +1234567890
+      apiKey: string;
+      webhookUrl?: string;
+      dmPolicy: 'pairing' | 'allowlist' | 'open';
+      allowedUsers?: string[];
+    };
+  }
+}
+```
+
+**Response:**
+```typescript
+HTTP 202 Accepted
+{
+  success: true;
+  message: 'VM creation request accepted for processing';
+  commandId: string;       // Use to subscribe to Redis clawd:responses
+  vm: { name: string; minionId: string; };
+}
+```
+
+**Important:**
+- Frontend must generate UUID v4 for `id` field before sending request
+- Use this `id` to subscribe to `clawd:responses` Redis channel for real-time updates
+- Returns HTTP 202 (Accepted) not 201 (Created) since processing is async
+- At least one channel must have `enabled: true`
+
 ### Authentication Flow
 1. User clicks "Connect" → backend creates session
 2. Redirect to Google OAuth
@@ -245,5 +299,6 @@ docker push ticruz38/minion:amd64
 2025-02-06 - Added VMCreationModal component, VM creation API endpoint, SSR-safe patterns
 2025-02-06 - US-007: Integrated modal with CharacterSelector, added toast notification system  
 2026-02-07 - Deterministic ports (3010 dev, 3011 preview) configured in vite.config.ts
+2026-02-07 - US-001: Multi-channel VM creation API with UUID correlation and Redis pub/sub
 
 **Maintainers:** Update this date when modifying this file.
