@@ -171,6 +171,61 @@ docker push ticruz38/minion:amd64
 4. On successful launch: modal closes and shows success toast notification with minion name
 5. API POST `/api/vms` publishes to Redis `clawd:commands` channel
 
+### Redis Pub/Sub Service (VM Status Updates)
+Located at `src/lib/server/redis.ts`
+
+**VMStatusSubscriber Class:**
+```typescript
+import { VMStatusSubscriber } from '$lib/server/redis.js';
+
+const subscriber = new VMStatusSubscriber(
+  process.env.REDIS_URL || 'redis://localhost:6379',
+  10 * 60 * 1000 // 10 minute auto-unsubscribe timeout
+);
+
+// Connect to Redis
+await subscriber.connect();
+
+// Subscribe to a commandId for real-time updates
+const unsubscribe = subscriber.subscribe(commandId, (event) => {
+  switch (event.status) {
+    case 'ACKNOWLEDGED':
+      console.log('Request received by backend');
+      break;
+    case 'SUCCESS':
+      console.log('VM created:', event.data?.vmId);
+      break;
+    case 'ERROR':
+      console.error('VM creation failed:', event.error?.message);
+      break;
+  }
+});
+
+// Clean up when done
+unsubscribe(); // or subscriber.unsubscribe(commandId)
+await subscriber.disconnect();
+```
+
+**Features:**
+- Subscribes to `clawd:responses` channel
+- Auto-unsubscribes after 10 minutes (configurable) to prevent memory leaks
+- Auto-unsubscribes on terminal states (SUCCESS/ERROR)
+- Handles ACKNOWLEDGED, SUCCESS, and ERROR events
+- Singleton pattern via `getSharedVMStatusSubscriber()` for server-wide use
+
+**Event Types:**
+```typescript
+type VMStatus = 'ACKNOWLEDGED' | 'SUCCESS' | 'ERROR';
+interface VMStatusEvent {
+  status: VMStatus;
+  commandId: string;
+  message?: string;
+  data?: { vmId?: string; connectionInfo?: {...} };
+  error?: { code: string; message: string };
+  timestamp: string;
+}
+```
+
 ### VM Creation API (Multi-Channel)
 Located at `src/routes/api/vms/+server.ts`
 
@@ -300,5 +355,6 @@ HTTP 202 Accepted
 2025-02-06 - US-007: Integrated modal with CharacterSelector, added toast notification system  
 2026-02-07 - Deterministic ports (3010 dev, 3011 preview) configured in vite.config.ts
 2026-02-07 - US-001: Multi-channel VM creation API with UUID correlation and Redis pub/sub
+2026-02-07 - US-002: Redis subscription service for real-time VM status updates with auto-cleanup
 
 **Maintainers:** Update this date when modifying this file.
