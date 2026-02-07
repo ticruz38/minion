@@ -11,6 +11,8 @@ Started: Sat Feb  7 11:35:15 AM CET 2026
 - **Redis Pub/Sub:** Use separate Redis connections for subscriber (receives messages) and publisher (sends messages)
 - **Memory Leak Prevention:** Always set auto-unsubscribe timeouts for Redis subscriptions; clear timeouts on manual unsubscribe
 - **Vitest Pattern:** Use vi.mock() at top-level to mock dependencies like ioredis; extract mock instances via vi.mocked()
+- **Svelte Type Exports:** Export types/interfaces from `<script context="module">` block, not regular `<script>`
+- **Component Data Attributes:** Add `data-testid` attributes for reliable Playwright/Cypress selectors
 
 ---
 
@@ -54,7 +56,30 @@ Started: Sat Feb  7 11:35:15 AM CET 2026
   - Always implement cleanup (clearTimeout, disconnect) in disconnect() methods
   - Use vi.fn() and vi.mocked() to extract and verify mock function calls in vitest
   - For Redis message handling tests, extract the message handler from mock calls
-  - Auto-cleanup patterns: timeout-based + terminal-state-based for reliability
+  - Auto-cleanup patterns: timeout-based + terminal-state-state-based for reliability
   - TypeScript discriminated unions work well for event status types
   - Export types from server modules for use in frontend components
+---
+
+## 2026-02-07 11:47:00 - US-003
+- Created ChannelSelectionStep.svelte component for multi-channel selection
+- Implemented visual grid of channel cards (Telegram, Discord, WhatsApp) with icons and descriptions
+- Added checkbox selection with visual feedback (selected/unselected states with colors)
+- Implemented "Selected: X channels" summary with channel chips
+- Added validation message when no channels are selected
+- Responsive design: 3 columns desktop, 2 columns tablet, 1 column mobile
+- Full keyboard accessibility (Enter/Space to select, proper ARIA attributes)
+- Exported TypeScript types from `<script context="module">` for external use
+- Browser tested across desktop (1280px), tablet (768px), and mobile (375px) viewports
+- Files changed:
+  - `src/lib/components/ChannelSelectionStep.svelte` - New channel selection component
+  - `src/routes/test-channel-selection/+page.svelte` - Temporary test page (for verification)
+- **Learnings for future iterations:**
+  - In Svelte, export types/interfaces from `<script context="module">` block, not regular `<script>`
+  - Use CSS custom properties (variables) for dynamic channel colors: `--channel-color: #xxx`
+  - Add `data-testid` attributes for reliable Playwright selectors
+  - Grid layout with media queries: `grid-template-columns: repeat(3, 1fr)` → 2 → 1
+  - Visual feedback on selection: border-color change + box-shadow glow effect
+  - Use `aria-checked` and `role="checkbox"` for accessible card components
+  - Svelte transitions: `{@html}` directive for rendering SVG icons from strings
 ---
