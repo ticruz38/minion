@@ -107,8 +107,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed 2026-02-07. Created WhatsAppConfigForm.svelte with E.164 phone validation (+ followed by 10-15 digits), API key input with password masking and toggle, optional webhook URL input, WhatsApp Business Platform help link, dmPolicy radio buttons (pairing/allowlist/open), and allowlist phone number chips. Uses WhatsApp green (#25d366) branding."
     },
     {
       "id": "US-007",

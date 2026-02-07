@@ -247,3 +247,28 @@ Started: Sat Feb  7 11:35:15 AM CET 2026
   - Consistent event dispatching pattern: `change` for data, `valid` for boolean
   - Same two-way binding pattern with `bind:config` for parent-child communication
 ---
+---
+
+## 2026-02-07 12:13:00 - US-006
+- Created WhatsAppConfigForm.svelte component for WhatsApp Business API configuration
+- Phone Number input with E.164 format validation (regex: /^\+[1-9]\d{9,14}$/)
+- API Key input with password masking and show/hide toggle button
+- Optional Webhook URL input for receiving message events
+- Help box with link to WhatsApp Business Platform signup
+- dmPolicy radio buttons: Pairing, Allowlist, Open with visual selection states
+- Allowlist textarea for phone numbers with E.164 format chips
+- Real-time validation for phone and API key with visual feedback (green/red borders)
+- WhatsApp branding color (#25d366) used throughout component
+- Exported types: `DMPolicy` and `WhatsAppConfig` from module context
+- Added `isTesting` prop to disable animations during E2E tests
+- Browser verified using Playwright skill: all functionality works correctly
+- All quality checks pass: TypeScript (0 errors), Vitest (22/22 tests passing)
+- Files changed:
+  - `src/lib/components/WhatsAppConfigForm.svelte` - New WhatsApp config form component
+- **Learnings for future iterations:**
+  - WhatsApp uses different credentials than Telegram/Discord: phone number + API key instead of bot token
+  - E.164 phone format validation: starts with + followed by country code and 10-15 digits
+  - Phone number chips in allowlist mode need different formatting than username chips (keep the +)
+  - Webhook URL is optional - provide clear help text explaining auto-polling fallback
+  - Consistent pattern with other channel forms: same event dispatching, validation approach, styling
+---
