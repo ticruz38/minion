@@ -3,233 +3,244 @@
   import { fade, scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import MinionAvatar3D from './MinionAvatar3D.svelte';
+  import ChannelSelectionStep from './ChannelSelectionStep.svelte';
+  import TelegramConfigForm from './TelegramConfigForm.svelte';
+  import DiscordConfigForm from './DiscordConfigForm.svelte';
+  import WhatsAppConfigForm from './WhatsAppConfigForm.svelte';
+  import SecurityConfigStep from './SecurityConfigStep.svelte';
+  import ReviewStep from './ReviewStep.svelte';
+  import VMProgressModal from './VMProgressModal.svelte';
+  import type { ChannelSelection } from './ChannelSelectionStep.svelte';
+  import type { TelegramConfig } from './TelegramConfigForm.svelte';
+  import type { DiscordConfig } from './DiscordConfigForm.svelte';
+  import type { WhatsAppConfig } from './WhatsAppConfigForm.svelte';
+  import type { SecuritySummary } from './SecurityConfigStep.svelte';
+  import type { ReviewData, ChannelConfigs } from './ReviewStep.svelte';
 
   // Props
   export let isOpen = false;
   export let selectedMinion: { id: string; name: string; color: string } | null = null;
   
-  // Disable animations during testing for more reliable E2E tests
-  // Use a function to check at render time to catch test flag set after mount
+  // Disable animations during testing
   $: isTesting = typeof window !== 'undefined' && (window as { __TESTING__?: boolean }).__TESTING__ === true;
 
   // Event dispatcher
   const dispatch = createEventDispatcher<{
     close: void;
-    success: void;
+    success: { botName: string; vmId?: string };
   }>();
 
-  // Step tracking
+  // Step tracking - 5 steps: Name -> Channels -> Config -> Security -> Review
   let currentStep = 1;
-  const totalSteps = 4;
+  const totalSteps = 5;
+  const stepTitles = ['Name', 'Channels', 'Configure', 'Security', 'Review'];
 
   // Track if form is dirty (has any user input)
   let isDirty = false;
   let showConfirmClose = false;
   let modalElement: HTMLDivElement;
 
-  // Track form data for each step
-  let formData = {
-    botName: '',
-    telegramToken: '',
-    passcode: ''
-  };
+  // Command ID for Redis correlation (UUID v4)
+  let commandId = '';
 
-  // Validation state for Step 1
-  let botNameError = '';
+  // Step 1: Bot Name
+  let botName = '';
   let botNameTouched = false;
-
-  // Bot name validation
   const BOT_NAME_MIN_LENGTH = 3;
   const BOT_NAME_MAX_LENGTH = 30;
   const BOT_NAME_REGEX = /^[a-zA-Z0-9-]+$/;
 
-  // Validation state for Step 2
-  let tokenError = '';
-  let tokenTouched = false;
-  let showToken = false;
+  // Step 2: Channel Selection
+  let selectedChannels: ChannelSelection = {
+    telegram: false,
+    discord: false,
+    whatsapp: false
+  };
 
-  // Telegram token validation pattern: digits:alphanumeric
-  const TOKEN_REGEX = /^\d+:[a-zA-Z0-9_-]+$/;
+  // Step 3: Channel Configurations
+  let telegramConfig: TelegramConfig = {
+    token: '',
+    dmPolicy: 'pairing',
+    allowedUsers: []
+  };
+  let discordConfig: DiscordConfig = {
+    token: '',
+    dmPolicy: 'pairing',
+    allowedUsers: []
+  };
+  let whatsappConfig: WhatsAppConfig = {
+    phoneNumber: '',
+    apiKey: '',
+    webhookUrl: '',
+    dmPolicy: 'pairing',
+    allowedUsers: []
+  };
 
-  // Validation state for Step 3
-  let passcodeError = '';
-  let passcodeTouched = false;
-  let showPasscode = false;
+  // Track validity of each channel config
+  let telegramValid = false;
+  let discordValid = false;
+  let whatsappValid = false;
 
-  // Passcode validation constants
-  const PASSCODE_MIN_LENGTH = 4;
-  const PASSCODE_MAX_LENGTH = 20;
+  // Step 4: Security is automatically derived from configs
 
-  // Step 4 state
+  // Step 5: Review and Launch
   let isLaunching = false;
   let launchError = '';
-  let showReviewPasscode = false;
-  
-  // Credit constants (mock data - in real app, fetch from API)
-  const HOURLY_RATE = 95;
   let userBalance = 500; // Mock balance - would come from user profile
-  
-  // Check if balance is low (< 2 hours runtime)
-  $: estimatedHours = Math.floor(userBalance / HOURLY_RATE);
-  $: isLowBalance = userBalance < HOURLY_RATE * 2;
+
+  // VM Progress Modal state
+  let showProgressModal = false;
+  let progressModalComponent: VMProgressModal;
+
+  // Credit constants
+  const HOURLY_RATE = 95;
 
   // Check if form has any data
-  $: isDirty = formData.botName !== '' || formData.telegramToken !== '' || formData.passcode !== '';
+  $: isDirty = botName !== '' || 
+               selectedChannels.telegram || 
+               selectedChannels.discord || 
+               selectedChannels.whatsapp ||
+               telegramConfig.token !== '' ||
+               discordConfig.token !== '' ||
+               whatsappConfig.phoneNumber !== '';
 
-  // Real-time bot name validation
-  $: {
-    if (botNameTouched || formData.botName.length > 0) {
-      botNameError = validateBotName(formData.botName);
-    } else {
-      botNameError = '';
-    }
+  // Step 1 validation
+  $: botNameError = botNameTouched || botName.length > 0 ? validateBotName(botName) : '';
+  $: isStep1Valid = botName.length >= BOT_NAME_MIN_LENGTH && 
+                    botName.length <= BOT_NAME_MAX_LENGTH && 
+                    BOT_NAME_REGEX.test(botName);
+
+  // Step 2 validation
+  $: isStep2Valid = selectedChannels.telegram || selectedChannels.discord || selectedChannels.whatsapp;
+
+  // Step 3 validation - all selected channels must be valid
+  $: isStep3Valid = (!selectedChannels.telegram || telegramValid) &&
+                    (!selectedChannels.discord || discordValid) &&
+                    (!selectedChannels.whatsapp || whatsappValid);
+
+  // Step 4 is always valid (it's a review step)
+  $: isStep4Valid = true;
+
+  // Step 5 - can proceed to launch
+  $: isStep5Valid = !isLaunching;
+
+  // Build security config for Step 4
+  $: securityConfig = buildSecurityConfig(selectedChannels, telegramConfig, discordConfig, whatsappConfig);
+
+  // Build review data for Step 5
+  $: reviewData = buildReviewData(botName, selectedChannels, telegramConfig, discordConfig, whatsappConfig);
+
+  // Generate UUID v4
+  function generateUUID(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
   }
-
-  // Check if Step 1 is valid
-  $: isStep1Valid = formData.botName.length >= BOT_NAME_MIN_LENGTH && 
-                    formData.botName.length <= BOT_NAME_MAX_LENGTH && 
-                    BOT_NAME_REGEX.test(formData.botName);
-
-  // Real-time token validation
-  $: {
-    if (tokenTouched || formData.telegramToken.length > 0) {
-      tokenError = validateToken(formData.telegramToken);
-    } else {
-      tokenError = '';
-    }
-  }
-
-  // Check if Step 2 is valid
-  $: isStep2Valid = TOKEN_REGEX.test(formData.telegramToken);
-
-  // Real-time passcode validation
-  $: {
-    if (passcodeTouched || formData.passcode.length > 0) {
-      passcodeError = validatePasscode(formData.passcode);
-    } else {
-      passcodeError = '';
-    }
-  }
-
-  // Check if Step 3 is valid
-  $: isStep3Valid = formData.passcode.length >= PASSCODE_MIN_LENGTH && 
-                    formData.passcode.length <= PASSCODE_MAX_LENGTH;
 
   function validateBotName(name: string): string {
-    if (name.length === 0) {
-      return '';
-    }
-    if (name.length < BOT_NAME_MIN_LENGTH) {
-      return `Bot name must be at least ${BOT_NAME_MIN_LENGTH} characters`;
-    }
-    if (name.length > BOT_NAME_MAX_LENGTH) {
-      return `Bot name must be no more than ${BOT_NAME_MAX_LENGTH} characters`;
-    }
-    if (!BOT_NAME_REGEX.test(name)) {
-      return 'Only letters, numbers, and hyphens allowed';
-    }
+    if (name.length === 0) return '';
+    if (name.length < BOT_NAME_MIN_LENGTH) return `Bot name must be at least ${BOT_NAME_MIN_LENGTH} characters`;
+    if (name.length > BOT_NAME_MAX_LENGTH) return `Bot name must be no more than ${BOT_NAME_MAX_LENGTH} characters`;
+    if (!BOT_NAME_REGEX.test(name)) return 'Only letters, numbers, and hyphens allowed';
     return '';
   }
 
   function handleBotNameInput(e: Event) {
     const input = e.target as HTMLInputElement;
-    formData.botName = input.value;
+    botName = input.value;
     botNameTouched = true;
   }
 
-  function handleTokenInput(e: Event) {
-    const input = e.target as HTMLInputElement;
-    formData.telegramToken = input.value;
-    tokenTouched = true;
+  function buildSecurityConfig(
+    channels: ChannelSelection,
+    telegram: TelegramConfig,
+    discord: DiscordConfig,
+    whatsapp: WhatsAppConfig
+  ): SecuritySummary {
+    const config: SecuritySummary = { channels: [] };
+
+    if (channels.telegram) {
+      config.channels.push({
+        channelId: 'telegram',
+        channelName: 'Telegram',
+        dmPolicy: telegram.dmPolicy,
+        allowedUsers: telegram.allowedUsers,
+        color: '#0088cc',
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.198 2.433a2.242 2.242 0 0 0-1.022.215l-16.5 6.498a2.255 2.255 0 0 0-.106 4.053l3.995 1.689 1.69 3.995a2.255 2.255 0 0 0 4.053-.106l6.498-16.5a2.242 2.242 0 0 0-1.608-3.044z"/><path d="m9.5 14.5 5-5"/></svg>'
+      });
+    }
+
+    if (channels.discord) {
+      config.channels.push({
+        channelId: 'discord',
+        channelName: 'Discord',
+        dmPolicy: discord.dmPolicy,
+        allowedUsers: discord.allowedUsers,
+        color: '#5865f2',
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 9a5 5 0 0 0-5-5h-2a5 5 0 0 0-5 5v6a5 5 0 0 0 5 5h2a5 5 0 0 0 5-5V9z"/><path d="M8 11v2"/><path d="M16 11v2"/><path d="M12 11v2"/></svg>'
+      });
+    }
+
+    if (channels.whatsapp) {
+      config.channels.push({
+        channelId: 'whatsapp',
+        channelName: 'WhatsApp',
+        dmPolicy: whatsapp.dmPolicy,
+        allowedUsers: whatsapp.allowedUsers,
+        color: '#25d366',
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"/><path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1z"/><path d="M14 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1z"/><path d="M9.5 13.5c.5 1 1.5 1 2.5 1s2-.5 2.5-1"/></svg>'
+      });
+    }
+
+    return config;
   }
 
-  function toggleTokenVisibility() {
-    showToken = !showToken;
-  }
+  function buildReviewData(
+    name: string,
+    channels: ChannelSelection,
+    telegram: TelegramConfig,
+    discord: DiscordConfig,
+    whatsapp: WhatsAppConfig
+  ): ReviewData {
+    const channelConfigs: ChannelConfigs = {};
 
-  function validateToken(token: string): string {
-    if (token.length === 0) {
-      return '';
+    if (channels.telegram) {
+      channelConfigs.telegram = {
+        token: telegram.token,
+        dmPolicy: telegram.dmPolicy,
+        allowedUsers: telegram.allowedUsers
+      };
     }
-    if (!TOKEN_REGEX.test(token)) {
-      return 'Token format should be: numbers:letters (e.g., 123456:ABC-DEF123)';
-    }
-    return '';
-  }
 
-  function handlePasscodeInput(e: Event) {
-    const input = e.target as HTMLInputElement;
-    formData.passcode = input.value;
-    passcodeTouched = true;
-  }
+    if (channels.discord) {
+      channelConfigs.discord = {
+        token: discord.token,
+        dmPolicy: discord.dmPolicy,
+        allowedUsers: discord.allowedUsers
+      };
+    }
 
-  function togglePasscodeVisibility() {
-    showPasscode = !showPasscode;
-  }
+    if (channels.whatsapp) {
+      channelConfigs.whatsapp = {
+        phoneNumber: whatsapp.phoneNumber,
+        apiKey: whatsapp.apiKey,
+        webhookUrl: whatsapp.webhookUrl || undefined,
+        dmPolicy: whatsapp.dmPolicy,
+        allowedUsers: whatsapp.allowedUsers
+      };
+    }
 
-  function generateRandomPasscode() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    for (let i = 0; i < 8; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    formData.passcode = result;
-    passcodeTouched = true;
-  }
-
-  function validatePasscode(passcode: string): string {
-    if (passcode.length === 0) {
-      return '';
-    }
-    if (passcode.length < PASSCODE_MIN_LENGTH) {
-      return `Passcode must be at least ${PASSCODE_MIN_LENGTH} characters`;
-    }
-    if (passcode.length > PASSCODE_MAX_LENGTH) {
-      return `Passcode must be no more than ${PASSCODE_MAX_LENGTH} characters`;
-    }
-    return '';
+    return {
+      botName: name,
+      channels: channelConfigs
+    };
   }
 
   function goToNextStep() {
     if (currentStep < totalSteps) {
       currentStep++;
-    }
-  }
-
-  function toggleReviewPasscodeVisibility() {
-    showReviewPasscode = !showReviewPasscode;
-  }
-
-  async function handleLaunch() {
-    if (!selectedMinion) return;
-    
-    isLaunching = true;
-    launchError = '';
-    
-    try {
-      const response = await fetch('/api/vms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.botName,
-          token: formData.telegramToken,
-          passcode: formData.passcode,
-          minionId: selectedMinion.id
-        })
-      });
-      
-      const result = await response.json();
-      
-      if (response.ok && result.success) {
-        dispatch('success');
-        closeModal();
-      } else {
-        launchError = result.message || 'Failed to launch bot. Please try again.';
-      }
-    } catch (error) {
-      launchError = 'Network error. Please check your connection and try again.';
-    } finally {
-      isLaunching = false;
     }
   }
 
@@ -239,9 +250,181 @@
     }
   }
 
+  function handleChannelSelectionChange(event: CustomEvent<ChannelSelection>) {
+    selectedChannels = event.detail;
+  }
+
+  function handleTelegramConfigChange(event: CustomEvent<TelegramConfig>) {
+    telegramConfig = event.detail;
+  }
+
+  function handleTelegramValid(event: CustomEvent<boolean>) {
+    telegramValid = event.detail;
+  }
+
+  function handleDiscordConfigChange(event: CustomEvent<DiscordConfig>) {
+    discordConfig = event.detail;
+  }
+
+  function handleDiscordValid(event: CustomEvent<boolean>) {
+    discordValid = event.detail;
+  }
+
+  function handleWhatsAppConfigChange(event: CustomEvent<WhatsAppConfig>) {
+    whatsappConfig = event.detail;
+  }
+
+  function handleWhatsAppValid(event: CustomEvent<boolean>) {
+    whatsappValid = event.detail;
+  }
+
+  async function handleLaunch() {
+    if (!selectedMinion) return;
+    
+    isLaunching = true;
+    launchError = '';
+
+    // Generate command ID for Redis correlation
+    commandId = generateUUID();
+    
+    // Show progress modal
+    showProgressModal = true;
+
+    // Build the request body
+    const requestBody: {
+      id: string;
+      name: string;
+      minionId: string;
+      channels: Record<string, unknown>;
+    } = {
+      id: commandId,
+      name: botName,
+      minionId: selectedMinion.id,
+      channels: {}
+    };
+
+    // Add selected channels
+    if (selectedChannels.telegram) {
+      requestBody.channels.telegram = {
+        enabled: true,
+        token: telegramConfig.token,
+        dmPolicy: telegramConfig.dmPolicy,
+        allowedUsers: telegramConfig.allowedUsers.length > 0 ? telegramConfig.allowedUsers : undefined
+      };
+    }
+
+    if (selectedChannels.discord) {
+      requestBody.channels.discord = {
+        enabled: true,
+        token: discordConfig.token,
+        dmPolicy: discordConfig.dmPolicy,
+        allowedUsers: discordConfig.allowedUsers.length > 0 ? discordConfig.allowedUsers : undefined
+      };
+    }
+
+    if (selectedChannels.whatsapp) {
+      requestBody.channels.whatsapp = {
+        enabled: true,
+        phoneNumber: whatsappConfig.phoneNumber,
+        apiKey: whatsappConfig.apiKey,
+        webhookUrl: whatsappConfig.webhookUrl || undefined,
+        dmPolicy: whatsappConfig.dmPolicy,
+        allowedUsers: whatsappConfig.allowedUsers.length > 0 ? whatsappConfig.allowedUsers : undefined
+      };
+    }
+
+    try {
+      const response = await fetch('/api/vms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        // Update progress modal with acknowledged status
+        progressModalComponent?.updateStatus({
+          status: 'acknowledged',
+          message: 'Request received by backend'
+        });
+
+        // Start polling for status updates (in real implementation, this would use WebSocket or SSE)
+        // For now, simulate the flow
+        setTimeout(() => {
+          progressModalComponent?.updateStatus({
+            status: 'creating',
+            message: 'Creating your bot VM...'
+          });
+        }, 1500);
+
+        // Simulate success (in production, this would come from Redis/SSE)
+        setTimeout(() => {
+          progressModalComponent?.updateStatus({
+            status: 'success',
+            vmId: result.commandId || commandId,
+            connectionInfo: {
+              ...(selectedChannels.telegram && { telegram: { botUsername: `${botName.toLowerCase()}_bot` } }),
+              ...(selectedChannels.discord && { discord: { botUsername: botName } }),
+              ...(selectedChannels.whatsapp && { whatsapp: { phoneNumber: whatsappConfig.phoneNumber } })
+            }
+          });
+        }, 3500);
+      } else {
+        launchError = result.message || 'Failed to launch bot. Please try again.';
+        progressModalComponent?.updateStatus({
+          status: 'error',
+          error: {
+            code: 'LAUNCH_FAILED',
+            message: launchError
+          }
+        });
+      }
+    } catch (error) {
+      launchError = 'Network error. Please check your connection and try again.';
+      progressModalComponent?.updateStatus({
+        status: 'error',
+        error: {
+          code: 'NETWORK_ERROR',
+          message: launchError
+        }
+      });
+    } finally {
+      isLaunching = false;
+    }
+  }
+
+  function handleProgressSuccess(event: CustomEvent<{ vmId?: string; connectionInfo?: unknown }>) {
+    const { vmId } = event.detail;
+    
+    // Dispatch success to parent
+    dispatch('success', { botName, vmId });
+    
+    // Close modals and reset
+    showProgressModal = false;
+    closeModal();
+  }
+
+  function handleProgressError() {
+    // Keep progress modal open to show error state
+    // User can retry or cancel from the modal
+  }
+
+  function handleProgressRetry() {
+    // Retry the launch
+    showProgressModal = false;
+    progressModalComponent?.reset();
+    handleLaunch();
+  }
+
+  function handleProgressClose() {
+    showProgressModal = false;
+    progressModalComponent?.reset();
+  }
+
   // Handle escape key
   function handleKeyDown(e: KeyboardEvent) {
-    if (e.key === 'Escape' && isOpen) {
+    if (e.key === 'Escape' && isOpen && !showProgressModal) {
       handleCloseAttempt();
     }
   }
@@ -261,11 +444,43 @@
     showConfirmClose = false;
     // Reset form data when modal closes
     setTimeout(() => {
-      formData = { botName: '', telegramToken: '', passcode: '' };
-      currentStep = 1;
-      botNameTouched = false;
-      botNameError = '';
+      resetForm();
     }, 300);
+  }
+
+  // Reset all form state
+  function resetForm() {
+    currentStep = 1;
+    botName = '';
+    botNameTouched = false;
+    selectedChannels = {
+      telegram: false,
+      discord: false,
+      whatsapp: false
+    };
+    telegramConfig = {
+      token: '',
+      dmPolicy: 'pairing',
+      allowedUsers: []
+    };
+    discordConfig = {
+      token: '',
+      dmPolicy: 'pairing',
+      allowedUsers: []
+    };
+    whatsappConfig = {
+      phoneNumber: '',
+      apiKey: '',
+      webhookUrl: '',
+      dmPolicy: 'pairing',
+      allowedUsers: []
+    };
+    telegramValid = false;
+    discordValid = false;
+    whatsappValid = false;
+    commandId = '';
+    launchError = '';
+    isLaunching = false;
   }
 
   // Handle backdrop click
@@ -284,6 +499,11 @@
   // Cancel close (stay on modal)
   function cancelClose() {
     showConfirmClose = false;
+  }
+
+  // Watch for modal open to generate command ID
+  $: if (isOpen && !commandId) {
+    commandId = generateUUID();
   }
 
   onMount(() => {
@@ -381,7 +601,7 @@
                     id="bot-name"
                     class="form-input"
                     placeholder="e.g., my-awesome-bot"
-                    value={formData.botName}
+                    value={botName}
                     on:input={handleBotNameInput}
                     maxlength={BOT_NAME_MAX_LENGTH}
                     autocomplete="off"
@@ -391,8 +611,8 @@
                   {/if}
                 </div>
                 <div class="input-meta">
-                  <span class="char-count" class:near-limit={formData.botName.length > BOT_NAME_MAX_LENGTH - 5}>
-                    {formData.botName.length}/{BOT_NAME_MAX_LENGTH}
+                  <span class="char-count" class:near-limit={botName.length > BOT_NAME_MAX_LENGTH - 5}>
+                    {botName.length}/{BOT_NAME_MAX_LENGTH}
                   </span>
                 </div>
                 {#if botNameError}
@@ -411,269 +631,77 @@
               </div>
             </div>
           {:else if currentStep === 2}
-            <!-- Step 2: Telegram Configuration -->
+            <!-- Step 2: Channel Selection -->
             <div class="step-form" in:fade={{ duration: isTesting ? 0 : 200 }}>
-              <h3 class="step-title">Connect Telegram</h3>
-              <p class="step-description">
-                Enter your Telegram bot token to enable messaging. Get one from @BotFather if you haven't already.
-              </p>
-
-              <div class="form-group">
-                <label for="telegram-token" class="form-label">
-                  Bot Token
-                  <span class="required">*</span>
-                </label>
-                <div class="input-wrapper" class:error={tokenError !== ''} class:valid={isStep2Valid}>
-                  <input
-                    type={showToken ? 'text' : 'password'}
-                    id="telegram-token"
-                    class="form-input"
-                    placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
-                    value={formData.telegramToken}
-                    on:input={handleTokenInput}
-                    autocomplete="off"
-                  />
-                  <button
-                    type="button"
-                    class="visibility-toggle"
-                    on:click={toggleTokenVisibility}
-                    aria-label={showToken ? 'Hide token' : 'Show token'}
-                  >
-                    {#if showToken}
-                      <!-- Eye-off icon -->
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                        <line x1="1" y1="1" x2="23" y2="23"></line>
-                      </svg>
-                    {:else}
-                      <!-- Eye icon -->
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                      </svg>
-                    {/if}
-                  </button>
-                </div>
-                {#if tokenError}
-                  <span class="error-message" transition:fade={{ duration: isTesting ? 0 : 150 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <line x1="12" y1="8" x2="12" y2="12"></line>
-                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                    </svg>
-                    {tokenError}
-                  </span>
-                {/if}
-                <div class="help-box">
-                  <div class="help-box-icon">💡</div>
-                  <div class="help-box-content">
-                    <p class="help-box-title">Don't have a bot token?</p>
-                    <p class="help-box-text">
-                      Message <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" class="help-link">@BotFather</a> on Telegram and send <code>/newbot</code> to create one.
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <ChannelSelectionStep 
+                bind:selectedChannels
+                isTesting={isTesting}
+                on:change={handleChannelSelectionChange}
+              />
             </div>
           {:else if currentStep === 3}
-            <!-- Step 3: Security Passcode -->
-            <div class="step-form" in:fade={{ duration: isTesting ? 0 : 200 }}>
-              <h3 class="step-title">Security Passcode</h3>
+            <!-- Step 3: Channel Configuration -->
+            <div class="step-form channel-config-step" in:fade={{ duration: isTesting ? 0 : 200 }}>
+              <h3 class="step-title">Configure Channels</h3>
               <p class="step-description">
-                Set a passcode that users must send to your bot before they can access it.
+                Enter the credentials and security settings for each selected channel.
               </p>
 
-              <div class="form-group">
-                <label for="passcode" class="form-label">
-                  Bot Passcode
-                  <span class="required">*</span>
-                </label>
-                <div class="input-wrapper passcode-wrapper" class:error={passcodeError !== ''} class:valid={isStep3Valid}>
-                  <input
-                    type={showPasscode ? 'text' : 'password'}
-                    id="passcode"
-                    class="form-input"
-                    placeholder="Enter a secure passcode"
-                    value={formData.passcode}
-                    on:input={handlePasscodeInput}
-                    maxlength={PASSCODE_MAX_LENGTH}
-                    autocomplete="off"
-                  />
-                  <button
-                    type="button"
-                    class="visibility-toggle passcode-visibility-toggle"
-                    on:click={togglePasscodeVisibility}
-                    aria-label={showPasscode ? 'Hide passcode' : 'Show passcode'}
-                  >
-                    {#if showPasscode}
-                      <!-- Eye-off icon -->
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                        <line x1="1" y1="1" x2="23" y2="23"></line>
-                      </svg>
-                    {:else}
-                      <!-- Eye icon -->
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                      </svg>
-                    {/if}
-                  </button>
-                  <button
-                    type="button"
-                    class="generate-passcode-btn"
-                    on:click={generateRandomPasscode}
-                    aria-label="Generate random passcode"
-                    title="Generate random passcode"
-                  >
-                    <!-- Dice icon -->
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                      <circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"></circle>
-                      <circle cx="16" cy="8" r="1.5" fill="currentColor" stroke="none"></circle>
-                      <circle cx="8" cy="16" r="1.5" fill="currentColor" stroke="none"></circle>
-                      <circle cx="16" cy="16" r="1.5" fill="currentColor" stroke="none"></circle>
-                    </svg>
-                  </button>
-                </div>
-                <div class="input-meta">
-                  <span class="char-count" class:near-limit={formData.passcode.length > PASSCODE_MAX_LENGTH - 3}>
-                    {formData.passcode.length}/{PASSCODE_MAX_LENGTH}
-                  </span>
-                </div>
-                {#if passcodeError}
-                  <span class="error-message" transition:fade={{ duration: isTesting ? 0 : 150 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <line x1="12" y1="8" x2="12" y2="12"></line>
-                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                    </svg>
-                    {passcodeError}
-                  </span>
-                {/if}
-                <div class="help-box security-help-box">
-                  <div class="help-box-icon">🔒</div>
-                  <div class="help-box-content">
-                    <p class="help-box-title">Why do I need a passcode?</p>
-                    <p class="help-box-text">
-                      Users must message this passcode to your bot before they can access it. This prevents unauthorized access.
-                    </p>
+              <div class="channel-forms">
+                {#if selectedChannels.telegram}
+                  <div class="channel-form-section">
+                    <TelegramConfigForm 
+                      bind:config={telegramConfig}
+                      isTesting={isTesting}
+                      on:change={handleTelegramConfigChange}
+                      on:valid={handleTelegramValid}
+                    />
                   </div>
-                </div>
-                <span class="help-text">
-                  Use {PASSCODE_MIN_LENGTH}-{PASSCODE_MAX_LENGTH} characters. Click the dice icon to generate a random passcode.
-                </span>
+                {/if}
+
+                {#if selectedChannels.discord}
+                  <div class="channel-form-section">
+                    <DiscordConfigForm 
+                      bind:config={discordConfig}
+                      isTesting={isTesting}
+                      on:change={handleDiscordConfigChange}
+                      on:valid={handleDiscordValid}
+                    />
+                  </div>
+                {/if}
+
+                {#if selectedChannels.whatsapp}
+                  <div class="channel-form-section">
+                    <WhatsAppConfigForm 
+                      bind:config={whatsappConfig}
+                      isTesting={isTesting}
+                      on:change={handleWhatsAppConfigChange}
+                      on:valid={handleWhatsAppValid}
+                    />
+                  </div>
+                {/if}
               </div>
             </div>
           {:else if currentStep === 4}
-            <!-- Step 4: Review and Launch -->
+            <!-- Step 4: Security Configuration -->
             <div class="step-form" in:fade={{ duration: isTesting ? 0 : 200 }}>
-              <h3 class="step-title">Review and Launch</h3>
-              <p class="step-description">
-                Review your configuration before launching your {selectedMinion?.name || 'bot'}.
-              </p>
-
-              <!-- Configuration Summary Card -->
-              <div class="summary-card">
-                <div class="summary-header">
-                  {#if selectedMinion}
-                    <div class="summary-avatar">
-                      <MinionAvatar3D 
-                        minionId={selectedMinion.id} 
-                        color={selectedMinion.color}
-                        isHovered={false}
-                        isSelected={true}
-                      />
-                    </div>
-                    <div class="summary-minion-info">
-                      <span class="summary-minion-name" style="color: {selectedMinion.color}">{selectedMinion.name}</span>
-                      <span class="summary-minion-role">AI Assistant</span>
-                    </div>
-                  {/if}
-                </div>
-                
-                <div class="summary-divider"></div>
-                
-                <div class="summary-details">
-                  <div class="summary-row">
-                    <span class="summary-label">Bot Name</span>
-                    <span class="summary-value">{formData.botName}</span>
-                  </div>
-                  <div class="summary-row">
-                    <span class="summary-label">Telegram</span>
-                    <span class="summary-value status-connected">● Connected</span>
-                  </div>
-                  <div class="summary-row">
-                    <span class="summary-label">Passcode</span>
-                    <div class="summary-passcode">
-                      <span class="summary-value passcode-value">
-                        {showReviewPasscode ? formData.passcode : '•'.repeat(formData.passcode.length)}
-                      </span>
-                      <button
-                        type="button"
-                        class="passcode-toggle"
-                        on:click={toggleReviewPasscodeVisibility}
-                        aria-label={showReviewPasscode ? 'Hide passcode' : 'Show passcode'}
-                      >
-                        {#if showReviewPasscode}
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                            <line x1="1" y1="1" x2="23" y2="23"></line>
-                          </svg>
-                        {:else}
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                          </svg>
-                        {/if}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Credit Cost Breakdown -->
-              <div class="credits-section">
-                <h4 class="credits-title">💰 Credit Usage</h4>
-                <div class="credits-card">
-                  <div class="credits-row">
-                    <span class="credits-label">Hourly Rate</span>
-                    <span class="credits-value">{HOURLY_RATE} credits/hour</span>
-                  </div>
-                  <div class="credits-row">
-                    <span class="credits-label">Your Balance</span>
-                    <span class="credits-value" class:low-balance={isLowBalance}>{userBalance} credits</span>
-                  </div>
-                  <div class="credits-divider"></div>
-                  <div class="credits-row total">
-                    <span class="credits-label">Estimated Runtime</span>
-                    <span class="credits-value">~{estimatedHours} hours</span>
-                  </div>
-                </div>
-                
-                {#if isLowBalance}
-                  <div class="warning-banner" transition:fade={{ duration: isTesting ? 0 : 200 }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                      <line x1="12" y1="9" x2="12" y2="13"></line>
-                      <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                    </svg>
-                    <span>Low balance! You have less than 2 hours of runtime remaining.</span>
-                  </div>
-                {/if}
-              </div>
-
-              <!-- Error Message -->
-              {#if launchError}
-                <div class="launch-error" transition:fade={{ duration: isTesting ? 0 : 150 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                  </svg>
-                  {launchError}
-                </div>
-              {/if}
+              <SecurityConfigStep 
+                {securityConfig}
+                isTesting={isTesting}
+              />
+            </div>
+          {:else if currentStep === 5}
+            <!-- Step 5: Review and Launch -->
+            <div class="step-form" in:fade={{ duration: isTesting ? 0 : 200 }}>
+              <ReviewStep 
+                {reviewData}
+                {selectedMinion}
+                {isLaunching}
+                {launchError}
+                {userBalance}
+                isTesting={isTesting}
+                on:launch={handleLaunch}
+              />
             </div>
           {/if}
         </div>
@@ -683,15 +711,25 @@
           <div class="step-indicator">
             {#each Array(totalSteps) as _, i}
               <div class="step-dot-wrapper">
-                <span 
+                <button
                   class="step-dot" 
                   class:active={currentStep === i + 1}
                   class:completed={currentStep > i + 1}
-                ></span>
+                  on:click={() => { if (currentStep > i + 1) currentStep = i + 1; }}
+                  disabled={currentStep <= i + 1}
+                  aria-label="Go to step {i + 1}"
+                ></button>
                 {#if i < totalSteps - 1}
                   <span class="step-line-segment" class:completed={currentStep > i + 1}></span>
                 {/if}
               </div>
+            {/each}
+          </div>
+          <div class="step-labels">
+            {#each stepTitles as title, i}
+              <span class="step-label" class:active={currentStep === i + 1} class:completed={currentStep > i + 1}>
+                {title}
+              </span>
             {/each}
           </div>
           <span class="step-text">Step {currentStep} of {totalSteps}</span>
@@ -724,13 +762,13 @@
           </button>
         {/if}
         
-        {#if currentStep === 4}
-          <!-- Launch Bot button for Step 4 -->
+        {#if currentStep === 5}
+          <!-- Launch button on Review step -->
           <button 
             class="btn btn-primary btn-launch" 
             style="--btn-color: {selectedMinion?.color || '#6366f1'}"
             on:click={handleLaunch}
-            disabled={isLaunching}
+            disabled={isLaunching || !isStep5Valid}
             data-testid="launch-button"
           >
             {#if isLaunching}
@@ -747,12 +785,17 @@
             {/if}
           </button>
         {:else}
-          <!-- Next button for Steps 1-3 -->
+          <!-- Next button for Steps 1-4 -->
           <button 
             class="btn btn-primary" 
             style="--btn-color: {selectedMinion?.color || '#6366f1'}"
             on:click={goToNextStep}
-            disabled={(currentStep === 1 && !isStep1Valid) || (currentStep === 2 && !isStep2Valid) || (currentStep === 3 && !isStep3Valid)}
+            disabled={
+              (currentStep === 1 && !isStep1Valid) || 
+              (currentStep === 2 && !isStep2Valid) ||
+              (currentStep === 3 && !isStep3Valid) ||
+              (currentStep === 4 && !isStep4Valid)
+            }
             data-testid="next-button"
           >
             Next
@@ -793,6 +836,18 @@
   </div>
 {/if}
 
+<!-- VM Progress Modal -->
+<VMProgressModal
+  bind:this={progressModalComponent}
+  isOpen={showProgressModal}
+  {commandId}
+  minionColor={selectedMinion?.color || '#6366f1'}
+  isTesting={isTesting}
+  on:close={handleProgressClose}
+  on:retry={handleProgressRetry}
+  on:success={handleProgressSuccess}
+/>
+
 <style>
   .modal-overlay {
     position: fixed;
@@ -809,7 +864,7 @@
 
   .modal-container {
     width: 100%;
-    max-width: 600px;
+    max-width: 640px;
     max-height: 90vh;
     background: linear-gradient(180deg, #1a1a25 0%, #12121a 100%);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -953,6 +1008,20 @@
     line-height: 1.5;
   }
 
+  /* Channel Config Step */
+  .channel-config-step .channel-forms {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .channel-form-section {
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+  }
+
   /* Form Styles */
   .form-group {
     display: flex;
@@ -1054,138 +1123,6 @@
     color: rgba(255, 255, 255, 0.4);
   }
 
-  /* Visibility Toggle Button */
-  .visibility-toggle {
-    position: absolute;
-    right: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    color: rgba(255, 255, 255, 0.5);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .visibility-toggle:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.8);
-    border-color: rgba(255, 255, 255, 0.2);
-  }
-
-  .visibility-toggle:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
-  }
-
-  /* Passcode Input with Generate Button */
-  .passcode-wrapper .form-input {
-    padding-right: 6.5rem;
-  }
-
-  .passcode-visibility-toggle {
-    right: 3.5rem;
-  }
-
-  .generate-passcode-btn {
-    position: absolute;
-    right: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
-    background: linear-gradient(135deg, var(--minion-color, #6366f1) 0%, transparent 100%);
-    background-size: 200% 100%;
-    border: 1px solid var(--minion-color, #6366f1);
-    border-radius: 8px;
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    color: white;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .generate-passcode-btn:hover {
-    background-position: 100% 0;
-    box-shadow: 0 0 10px var(--minion-color, #6366f1);
-  }
-
-  .generate-passcode-btn:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
-  }
-
-  .security-help-box {
-    background: rgba(16, 185, 129, 0.08);
-    border-color: rgba(16, 185, 129, 0.2);
-  }
-
-  /* Help Box */
-  .help-box {
-    display: flex;
-    gap: 0.75rem;
-    padding: 1rem;
-    background: rgba(99, 102, 241, 0.08);
-    border: 1px solid rgba(99, 102, 241, 0.2);
-    border-radius: 12px;
-    margin-top: 0.5rem;
-  }
-
-  .help-box-icon {
-    font-size: 1.25rem;
-    flex-shrink: 0;
-  }
-
-  .help-box-content {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .help-box-title {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.8);
-    margin: 0;
-  }
-
-  .help-box-text {
-    font-size: 0.8125rem;
-    color: rgba(255, 255, 255, 0.5);
-    margin: 0;
-    line-height: 1.5;
-  }
-
-  .help-link {
-    color: var(--minion-color, #6366f1);
-    text-decoration: none;
-    font-weight: 500;
-    transition: all 0.2s ease;
-  }
-
-  .help-link:hover {
-    text-decoration: underline;
-    opacity: 0.9;
-  }
-
-  code {
-    background: rgba(255, 255, 255, 0.1);
-    padding: 0.125rem 0.375rem;
-    border-radius: 4px;
-    font-family: 'Monaco', 'Menlo', monospace;
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.7);
-  }
-
   /* Step Indicator */
   .step-indicator-container {
     display: flex;
@@ -1211,6 +1148,9 @@
     height: 10px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.2);
+    border: none;
+    padding: 0;
+    cursor: pointer;
     transition: all 0.3s ease;
   }
 
@@ -1222,10 +1162,15 @@
 
   .step-dot.completed {
     background: #10b981;
+    cursor: pointer;
+  }
+
+  .step-dot:disabled {
+    cursor: default;
   }
 
   .step-line-segment {
-    width: 40px;
+    width: 30px;
     height: 2px;
     background: rgba(255, 255, 255, 0.2);
     margin: 0 0.5rem;
@@ -1234,6 +1179,31 @@
 
   .step-line-segment.completed {
     background: #10b981;
+  }
+
+  .step-labels {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 400px;
+    padding: 0 0.5rem;
+  }
+
+  .step-label {
+    font-size: 0.6875rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: all 0.2s ease;
+  }
+
+  .step-label.active {
+    color: var(--minion-color, #6366f1);
+    font-weight: 600;
+  }
+
+  .step-label.completed {
+    color: #10b981;
   }
 
   .step-text {
@@ -1310,6 +1280,11 @@
     border-color: rgba(239, 68, 68, 0.7);
   }
 
+  .btn-launch {
+    min-width: 140px;
+    justify-content: center;
+  }
+
   /* Confirmation Dialog */
   .confirm-dialog-overlay {
     position: absolute;
@@ -1355,206 +1330,6 @@
   .confirm-actions {
     display: flex;
     gap: 0.75rem;
-    justify-content: center;
-  }
-
-  /* Summary Card */
-  .summary-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
-    padding: 1.25rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .summary-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .summary-avatar {
-    width: 60px;
-    height: 60px;
-    border-radius: 12px;
-    overflow: hidden;
-    flex-shrink: 0;
-  }
-
-  .summary-minion-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .summary-minion-name {
-    font-size: 1.125rem;
-    font-weight: 700;
-  }
-
-  .summary-minion-role {
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.4);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-  }
-
-  .summary-divider {
-    height: 1px;
-    background: rgba(255, 255, 255, 0.08);
-  }
-
-  .summary-details {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .summary-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .summary-label {
-    font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.5);
-  }
-
-  .summary-value {
-    font-size: 0.9375rem;
-    color: white;
-    font-weight: 500;
-  }
-
-  .status-connected {
-    color: #10b981;
-  }
-
-  .summary-passcode {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .passcode-value {
-    font-family: 'Monaco', 'Menlo', monospace;
-    letter-spacing: 0.1em;
-  }
-
-  .passcode-toggle {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 6px;
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    color: rgba(255, 255, 255, 0.5);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .passcode-toggle:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.8);
-  }
-
-  /* Credits Section */
-  .credits-section {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .credits-title {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.8);
-    margin: 0;
-  }
-
-  .credits-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.625rem;
-  }
-
-  .credits-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .credits-row.total {
-    padding-top: 0.625rem;
-    border-top: 1px dashed rgba(255, 255, 255, 0.1);
-  }
-
-  .credits-label {
-    font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.5);
-  }
-
-  .credits-value {
-    font-size: 0.875rem;
-    color: white;
-    font-weight: 500;
-    font-family: 'Monaco', 'Menlo', monospace;
-  }
-
-  .credits-value.low-balance {
-    color: #f59e0b;
-  }
-
-  .credits-divider {
-    height: 1px;
-    background: rgba(255, 255, 255, 0.06);
-  }
-
-  /* Warning Banner */
-  .warning-banner {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    padding: 0.75rem 1rem;
-    background: rgba(245, 158, 11, 0.1);
-    border: 1px solid rgba(245, 158, 11, 0.3);
-    border-radius: 10px;
-    color: #f59e0b;
-    font-size: 0.8125rem;
-    font-weight: 500;
-  }
-
-  .warning-banner svg {
-    flex-shrink: 0;
-  }
-
-  /* Launch Error */
-  .launch-error {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.875rem;
-    color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
-    padding: 0.75rem 1rem;
-    border-radius: 10px;
-    border: 1px solid rgba(239, 68, 68, 0.2);
-  }
-
-  /* Launch Button */
-  .btn-launch {
-    min-width: 140px;
     justify-content: center;
   }
 
@@ -1625,8 +1400,12 @@
       font-size: 1.125rem;
     }
 
+    .step-labels {
+      display: none;
+    }
+
     .step-line-segment {
-      width: 30px;
+      width: 20px;
     }
 
     .modal-footer {
@@ -1648,62 +1427,24 @@
     }
 
     .form-input {
-      font-size: 16px; /* Prevents zoom on iOS */
-      padding-right: 3.5rem;
-    }
-
-    .passcode-wrapper .form-input {
-      padding-right: 7rem;
-    }
-
-    .visibility-toggle,
-    .generate-passcode-btn {
-      width: 40px;
-      height: 40px;
-    }
-
-    .passcode-visibility-toggle {
-      right: 3.25rem;
-    }
-
-    .summary-card {
-      padding: 1rem;
-    }
-
-    .summary-avatar {
-      width: 50px;
-      height: 50px;
-    }
-
-    .summary-minion-name {
-      font-size: 1rem;
-    }
-
-    .credits-card {
-      padding: 0.875rem;
-    }
-
-    .warning-banner {
-      font-size: 0.75rem;
+      font-size: 16px;
     }
   }
 
   /* Tablet */
   @media (max-width: 1024px) and (min-width: 769px) {
     .modal-container {
-      max-width: 500px;
+      max-width: 580px;
       border-radius: 20px;
     }
   }
 
-  /* Reduced motion - disable animations for accessibility and testing */
+  /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
     .modal-overlay,
     .modal-container,
     .step-form,
     .error-message,
-    .warning-banner,
-    .launch-error,
     .confirm-dialog-overlay,
     .confirm-dialog {
       animation: none !important;

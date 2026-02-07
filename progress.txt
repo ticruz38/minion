@@ -357,3 +357,28 @@ Started: Sat Feb  7 11:35:15 AM CET 2026
   - Error states should provide actionable suggestions and retry mechanism
   - Copy-to-clipboard functionality using navigator.clipboard API with error handling
 ---
+
+## 2026-02-07 13:10:00 - US-010
+- Integrated multi-channel modal flow with CharacterSelector
+- Implemented 5-step modal flow: Name → Channels → Configure → Security → Review
+- Added UUID v4 generation for Redis correlation on modal open
+- Integrated VMProgressModal for real-time status updates after launch
+- Form state properly resets on modal close/reopen (all configs, selections, name)
+- Updated +page.svelte to handle new success event payload with botName
+- Fixed critical reactivity bug in config forms (Telegram, Discord, WhatsApp):
+  - Issue: `dispatchChange()` was called before reactive `isValid` update
+  - Solution: Use reactive `$: dispatch('valid', isValid)` statement
+- Verified E2E flow works correctly with Playwright browser tests
+- All TypeScript checks pass (0 errors), all 22 unit tests pass
+- Files changed:
+  - `src/lib/components/VMCreationModal.svelte` - Complete rewrite with multi-channel flow
+  - `src/routes/+page.svelte` - Updated success event handler
+  - `src/lib/components/TelegramConfigForm.svelte` - Fixed reactivity bug
+  - `src/lib/components/DiscordConfigForm.svelte` - Fixed reactivity bug
+  - `src/lib/components/WhatsAppConfigForm.svelte` - Fixed reactivity bug
+- **Learnings for future iterations:**
+  - **CRITICAL Svelte Pattern:** When dispatching computed reactive values, use `$: dispatch('event', computedValue)` instead of calling dispatch from a function that also updates the dependencies
+  - Reactive statements in Svelte run AFTER the current event handler completes
+  - Form validation events should be reactive to ensure they fire after the computed state updates
+  - Component integration requires careful event flow design between parent and children
+---

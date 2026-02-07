@@ -61,6 +61,9 @@
 
   // Check if form is valid
   $: isValid = TOKEN_REGEX.test(config.token);
+  
+  // Dispatch valid event whenever validity changes
+  $: dispatch('valid', isValid);
 
   // Update allowed users array when input changes
   $: {
@@ -69,13 +72,7 @@
       .map(u => u.trim().replace(/^@/, ''))
       .filter(u => u.length > 0);
     config.allowedUsers = usernames;
-    dispatchChange();
-  }
-
-  // Dispatch change and validity events
-  function dispatchChange() {
     dispatch('change', config);
-    dispatch('valid', isValid);
   }
 
   function validateToken(token: string, touched: boolean): string {
@@ -95,7 +92,7 @@
     const input = e.target as HTMLInputElement;
     config = { ...config, token: input.value };
     tokenTouched = true;
-    dispatchChange();
+    dispatch('change', config);
   }
 
   function toggleTokenVisibility() {
@@ -104,7 +101,7 @@
 
   function handleDMPolicyChange(policy: DMPolicy) {
     config = { ...config, dmPolicy: policy };
-    dispatchChange();
+    dispatch('change', config);
   }
 
   function handleAllowedUsersInput(e: Event) {

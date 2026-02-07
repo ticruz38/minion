@@ -74,6 +74,9 @@
   $: isValid = PHONE_REGEX.test(config.phoneNumber) && 
                API_KEY_REGEX.test(config.apiKey) && 
                config.apiKey.length > 0;
+  
+  // Dispatch valid event whenever validity changes
+  $: dispatch('valid', isValid);
 
   // Update allowed users array when input changes
   $: {
@@ -82,13 +85,7 @@
       .map(u => u.trim().replace(/\s/g, ''))
       .filter(u => u.length > 0);
     config.allowedUsers = users;
-    dispatchChange();
-  }
-
-  // Dispatch change and validity events
-  function dispatchChange() {
     dispatch('change', config);
-    dispatch('valid', isValid);
   }
 
   function validatePhone(phone: string, touched: boolean): string {
@@ -124,20 +121,20 @@
     const input = e.target as HTMLInputElement;
     config = { ...config, phoneNumber: input.value };
     phoneTouched = true;
-    dispatchChange();
+    dispatch('change', config);
   }
 
   function handleApiKeyInput(e: Event) {
     const input = e.target as HTMLInputElement;
     config = { ...config, apiKey: input.value };
     apiKeyTouched = true;
-    dispatchChange();
+    dispatch('change', config);
   }
 
   function handleWebhookInput(e: Event) {
     const input = e.target as HTMLInputElement;
     config = { ...config, webhookUrl: input.value };
-    dispatchChange();
+    dispatch('change', config);
   }
 
   function toggleApiKeyVisibility() {
@@ -146,7 +143,7 @@
 
   function handleDMPolicyChange(policy: DMPolicy) {
     config = { ...config, dmPolicy: policy };
-    dispatchChange();
+    dispatch('change', config);
   }
 
   function handleAllowedUsersInput(e: Event) {

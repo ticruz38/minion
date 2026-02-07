@@ -52,10 +52,12 @@
     }, 5000);
   }
 
-  function handleModalSuccess() {
-    // Show success toast notification
+  function handleModalSuccess(event: CustomEvent<{ botName: string; vmId?: string }>) {
+    const { botName, vmId } = event.detail;
     const minionName = hiringMinion?.name || 'Bot';
-    showSuccessToast(`${minionName} is being deployed! Your bot will be ready shortly.`);
+    
+    // Show success toast notification with bot name
+    showSuccessToast(`${minionName} (${botName}) is being deployed! Your bot will be ready shortly.`);
     
     // Close the modal
     isModalOpen = false;
