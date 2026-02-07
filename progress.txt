@@ -8,6 +8,9 @@ Started: Sat Feb  7 11:35:15 AM CET 2026
 - **Redis Channels:** `clawd:commands` for publishing requests, `clawd:responses` for status updates
 - **TypeScript:** Use strict typing for channel configs with discriminated unions (`enabled: true`)
 - **Test Pattern:** Mock `/api/vms` route to verify request schema and response handling
+- **Redis Pub/Sub:** Use separate Redis connections for subscriber (receives messages) and publisher (sends messages)
+- **Memory Leak Prevention:** Always set auto-unsubscribe timeouts for Redis subscriptions; clear timeouts on manual unsubscribe
+- **Vitest Pattern:** Use vi.mock() at top-level to mock dependencies like ioredis; extract mock instances via vi.mocked()
 
 ---
 
@@ -28,4 +31,30 @@ Started: Sat Feb  7 11:35:15 AM CET 2026
   - When testing APIs, verify both request schema (what frontend sends) and response handling
   - UUID validation regex: `/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i`
   - Keep legacy token support for backward compatibility during transition
+---
+
+## 2026-02-07 11:42:00 - US-002
+- Created VMStatusSubscriber class in `src/lib/server/redis.ts` for Redis pub/sub
+- Subscribes to `clawd:responses` channel for real-time VM creation status updates
+- Supports subscribe/unsubscribe by commandId with callback handler
+- Implemented 10-minute auto-unsubscribe timeout to prevent memory leaks
+- Auto-unsubscribes on terminal states (SUCCESS, ERROR) for immediate cleanup
+- Handles ACKNOWLEDGED, SUCCESS, and ERROR events with full TypeScript types
+- Added singleton pattern via `getSharedVMStatusSubscriber()` for server-wide use
+- Created comprehensive unit tests with mocked Redis (22 tests, all passing)
+- Added vitest for unit testing alongside Playwright for E2E tests
+- Files changed:
+  - `src/lib/server/redis.ts` - New Redis subscription service
+  - `tests/redis-subscriber.spec.ts` - Unit tests for Redis subscriber
+  - `vitest.config.ts` - Vitest configuration for unit tests
+  - `package.json` - Added vitest dependency and test scripts
+  - `AGENTS.md` - Added Redis Pub/Sub Service documentation
+- **Learnings for future iterations:**
+  - Redis pub/sub requires separate connections for subscriber and publisher
+  - Always implement cleanup (clearTimeout, disconnect) in disconnect() methods
+  - Use vi.fn() and vi.mocked() to extract and verify mock function calls in vitest
+  - For Redis message handling tests, extract the message handler from mock calls
+  - Auto-cleanup patterns: timeout-based + terminal-state-based for reliability
+  - TypeScript discriminated unions work well for event status types
+  - Export types from server modules for use in frontend components
 ---
