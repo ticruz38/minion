@@ -89,8 +89,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed 2026-02-07. Created DiscordConfigForm.svelte with Discord branding (#5865F2), bot token input with masking/toggle, required intents warning box (Message Content Intent, Server Members Intent), link to Discord Developer Portal, dmPolicy selection with allowlist user chips, and real-time token validation."
     },
     {
       "id": "US-006",
