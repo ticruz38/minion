@@ -71,8 +71,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed 2026-02-07. TelegramConfigForm.svelte already existed with all required features: bot token input with password masking and visibility toggle, @BotFather help link with /newbot command, dmPolicy radio buttons (pairing/allowlist/open), allowedUsers textarea with username parsing, real-time token format validation using regex /^\d+:[a-zA-Z0-9_-]+$/."
     },
     {
       "id": "US-005",
