@@ -313,3 +313,54 @@
   • Browser verification with Playwright
   • Update AGENTS.md and progress.txt
   • Update PRD and commit ←
+• Used Shell (cd /root/code/minion && git add -A && git status)
+• The changes look good. Let me commit with the proper message format.
+• Used Shell (cd /root/code/minion && g...r full flow verification")
+• The commit is done. Let me run one final check to ensure everything is in order and then provide a summary.
+• Used SetTodoList
+  • Update CharacterSelector to use Svelte event dispatcher
+  • Add success toast notification to +page.svelte
+  • Run typecheck and build
+  • Browser verification with Playwright
+  • Update AGENTS.md and progress.txt
+  • Update PRD and commit
+• Used Shell (cd /root/code/minion && n...run check 2>&1 | tail -10)
+• All done. Let me provide a summary of what was accomplished for US-007.
+• ✅ US-007 Complete - Integrate modal with CharacterSelector
+
+  Summary
+
+  Successfully implemented the integration between the VM Creation Modal and CharacterSelector with the followin
+  g features:
+
+  Changes Made:
+
+  1. CharacterSelector.svelte - Replaced window event dispatch with Svelte's createEventDispatcher for type-safe
+     rent-child communication
+  2. +page.svelte - Added:
+    • on:hire event handler for modal opening
+    • Success toast notification system with auto-dismiss (5 seconds)
+    • Minion color theming on toast border
+    • Proper state cleanup after modal close
+
+  Files Changed:
+
+  • src/lib/components/CharacterSelector.svelte
+  • src/routes/+page.svelte
+  • AGENTS.md (updated patterns documentation)
+  • progress.txt (added progress log)
+  • prd.json (marked US-007 as passed)
+
+  Verification:
+
+  • ✅ Typecheck passes (0 errors)
+  • ✅ Build passes
+  • ✅ Playwright E2E test passed - full flow from HIRE click through all 4 steps to successful launch with toas
+    notification
+
+  Screenshots captured:
+
+  • /tmp/us-007-initial.png through /tmp/us-007-after-launch.png documenting the full user flow
+
+  ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  Next Story: US-008 (Implement responsive mobile experience) - still has passes: false

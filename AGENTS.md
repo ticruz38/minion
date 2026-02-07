@@ -122,6 +122,17 @@ PUBLIC_BASE_URL=https://minion.nuts.cash
 
 ---
 
+## Development Server Ports
+
+**⚠️ AGENTS:** This app uses deterministic ports configured in `vite.config.ts`:
+
+| Command | Port | Config |
+|---------|------|--------|
+| `npm run dev` | **3010** | `server.port` |
+| `npm run preview` | **3011** | `preview.port` |
+
+---
+
 ## Docker Build
 
 AMD64 image for Linux servers:
@@ -232,6 +243,7 @@ docker push ticruz38/minion:amd64
 2025-02-05 - Added 3D character selector, mobile responsiveness, GitHub Actions  
 2025-02-05 - OAuth tokens now returned in API responses for external bot integration
 2025-02-06 - Added VMCreationModal component, VM creation API endpoint, SSR-safe patterns
-2025-02-06 - US-007: Integrated modal with CharacterSelector, added toast notification system
+2025-02-06 - US-007: Integrated modal with CharacterSelector, added toast notification system  
+2026-02-07 - Deterministic ports (3010 dev, 3011 preview) configured in vite.config.ts
 
 **Maintainers:** Update this date when modifying this file.

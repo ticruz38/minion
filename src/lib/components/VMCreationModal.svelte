@@ -846,8 +846,8 @@
   }
 
   .close-button {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1048,7 +1048,9 @@
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
-    padding: 0.375rem;
+    width: 44px;
+    height: 44px;
+    padding: 0;
     color: rgba(255, 255, 255, 0.5);
     cursor: pointer;
     transition: all 0.2s ease;
@@ -1070,11 +1072,11 @@
 
   /* Passcode Input with Generate Button */
   .passcode-wrapper .form-input {
-    padding-right: 5.5rem;
+    padding-right: 6.5rem;
   }
 
   .passcode-visibility-toggle {
-    right: 3rem;
+    right: 3.5rem;
   }
 
   .generate-passcode-btn {
@@ -1086,7 +1088,9 @@
     background-size: 200% 100%;
     border: 1px solid var(--minion-color, #6366f1);
     border-radius: 8px;
-    padding: 0.375rem;
+    width: 44px;
+    height: 44px;
+    padding: 0;
     color: white;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -1429,13 +1433,16 @@
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 6px;
-    padding: 0.25rem;
+    width: 44px;
+    height: 44px;
+    padding: 0;
     color: rgba(255, 255, 255, 0.5);
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
   }
 
   .passcode-toggle:hover {
@@ -1580,6 +1587,10 @@
 
     .modal-header {
       padding: 1.25rem 1rem 1rem;
+      position: sticky;
+      top: 0;
+      background: linear-gradient(180deg, #1a1a25 0%, #12121a 100%);
+      z-index: 10;
     }
 
     .modal-title {
@@ -1623,6 +1634,21 @@
 
     .form-input {
       font-size: 16px; /* Prevents zoom on iOS */
+      padding-right: 3.5rem;
+    }
+
+    .passcode-wrapper .form-input {
+      padding-right: 7rem;
+    }
+
+    .visibility-toggle,
+    .generate-passcode-btn {
+      width: 40px;
+      height: 40px;
+    }
+
+    .passcode-visibility-toggle {
+      right: 3.25rem;
     }
 
     .summary-card {
@@ -1651,6 +1677,7 @@
   @media (max-width: 1024px) and (min-width: 769px) {
     .modal-container {
       max-width: 500px;
+      border-radius: 20px;
     }
   }
 </style>
