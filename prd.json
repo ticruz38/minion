@@ -141,8 +141,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed 2026-02-07. Created ReviewStep.svelte component with multi-channel support. Shows all selected channels with summary cards (icon, name, dmPolicy badge, masked credentials), allowlist user counts. Credit cost breakdown with low balance warning (< 2 hours runtime). Launch Bot button with loading state and minion color theming. All TypeScript types exported from module context."
     },
     {
       "id": "US-009",
@@ -158,8 +158,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed 2026-02-07. Created VMProgressModal.svelte with animated progress bar, status step indicators (Request sent → Acknowledged → Creating → Ready), success state with connection details (Telegram/Discord/WhatsApp bot usernames, VM ID with copy buttons), error state with error code and retry option. Component exports types VMProgressStatus, VMConnectionInfo, VMProgressData for external use. Browser verified with success, error, and progress scenarios."
     },
     {
       "id": "US-010",

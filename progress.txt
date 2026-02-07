@@ -16,6 +16,7 @@ Started: Sat Feb  7 11:35:15 AM CET 2026
 - **Form Component Pattern:** Use `bind:config` for two-way data binding with event dispatchers (`change`, `valid` events)
 - **Input Validation:** Real-time validation with regex patterns and visual feedback (green/red borders)
 - **Token Masking:** Use `<input type="password">` with toggle button to switch to `type="text"`
+- **Progress Modal Pattern:** Export `updateStatus()` method on component for parent to call with Redis events; dispatch `success`/`error`/`close` events for parent handling
 
 ---
 
@@ -59,7 +60,7 @@ Started: Sat Feb  7 11:35:15 AM CET 2026
   - Always implement cleanup (clearTimeout, disconnect) in disconnect() methods
   - Use vi.fn() and vi.mocked() to extract and verify mock function calls in vitest
   - For Redis message handling tests, extract the message handler from mock calls
-  - Auto-cleanup patterns: timeout-based + terminal-state-state-based for reliability
+  - Auto-cleanup patterns: timeout-based + terminal-state-based for reliability
   - TypeScript discriminated unions work well for event status types
   - Export types from server modules for use in frontend components
 ---
@@ -295,4 +296,64 @@ Started: Sat Feb  7 11:35:15 AM CET 2026
   - Channel metadata (name, color, icon) can be centralized and reused across components
   - Allowlist count chips provide useful at-a-glance information without cluttering the UI
   - Security tips section adds value and reinforces best practices
+---
+
+## 2026-02-07 12:34:00 - US-008
+- Created ReviewStep.svelte component for the final review and launch step
+- Implemented multi-channel summary cards with:
+  - Channel icons with brand colors (Telegram blue, Discord purple, WhatsApp green)
+  - Security policy badges with icons (🔒 Pairing, 📋 Allowlist, 🌐 Open)
+  - Masked credentials display (••••••••last4 format)
+  - Allowlist user count chips when applicable
+- Added credit cost breakdown section:
+  - Hourly rate display (95 credits/hour)
+  - User balance with monospace font
+  - Estimated runtime calculation
+  - Low balance warning banner (< 2 hours runtime)
+- Implemented Launch Bot button with:
+  - Minion color theming (dynamic gradient border)
+  - Loading spinner animation during launch
+  - Disabled state while launching
+- Full TypeScript type exports from module context for integration
+- Responsive design tested on desktop (1280px) and mobile (375px) viewports
+- Files changed:
+  - `src/lib/components/ReviewStep.svelte` - New review step component
+- **Learnings for future iterations:**
+  - Credential masking patterns: show last 4 for tokens, keep country code for phones
+  - Consistent card design with left border accent color matching channel brand
+  - Use CSS custom properties (--channel-color) for dynamic theming per channel
+  - Monospace fonts work well for credentials and numerical values
+  - Loading states should disable the button and show spinner + text change
+  - Error banners should use consistent red styling from existing components
+---
+
+## 2026-02-07 12:44:00 - US-009
+- Created VMProgressModal.svelte component for real-time progress during bot creation
+- Implemented animated progress bar with percentage display and step labels
+- Status step indicators showing Request sent → Acknowledged → Creating → Ready pipeline
+- Progress states: idle, acknowledged, creating, success, error with visual transitions
+- Success state displays:
+  - Green checkmark icon and "Bot Created!" title
+  - Connection details section with Telegram/Discord/WhatsApp bot info
+  - VM ID with copy-to-clipboard buttons
+  - Auto-close after 2.5 seconds with success event dispatch
+- Error state displays:
+  - Red X icon and "Creation Failed" title
+  - Error message and error code
+  - Suggestions section with troubleshooting tips
+  - Cancel and Try Again buttons (retry dispatches event for parent handling)
+- Exports TypeScript types: VMProgressStatus, VMConnectionInfo, VMProgressData
+- Component exposes `updateStatus()` method for parent to call with Redis events
+- Dispatches events: `close`, `retry`, `success` for parent handling
+- Browser verified with Playwright across success, error, and progress scenarios
+- TypeScript checks pass (0 errors)
+- Files changed:
+  - `src/lib/components/VMProgressModal.svelte` - New VM progress modal component
+- **Learnings for future iterations:**
+  - Use `{#if true}` block with `@const` to create local variable aliases for complex reactive expressions
+  - Export `updateStatus()` method on component instance for imperative updates from parent
+  - Component pattern: imperative updates for rapid state changes, events for final states
+  - Auto-close on success should have short delay so user sees the success state
+  - Error states should provide actionable suggestions and retry mechanism
+  - Copy-to-clipboard functionality using navigator.clipboard API with error handling
 ---
