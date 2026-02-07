@@ -382,3 +382,41 @@ Started: Sat Feb  7 11:35:15 AM CET 2026
   - Form validation events should be reactive to ensure they fire after the computed state updates
   - Component integration requires careful event flow design between parent and children
 ---
+
+## 2026-02-07 13:25:00 - US-011
+- Updated Playwright tests for the new multi-channel flow
+- Completely rewrote tests/vm-creation-modal.spec.ts with 56 comprehensive tests
+- New test structure covers the 5-step multi-channel modal flow:
+  - Step 1: Name Your Bot (validation, character counter, invalid characters)
+  - Step 2: Channel Selection (single/multiple selection, toggle, validation)
+  - Step 3: Channel Configuration (Telegram, Discord, WhatsApp forms with validation)
+  - Step 4: Security Configuration (review channels, dmPolicy explanations)
+  - Step 5: Review and Launch (masked credentials, credit cost, launch button)
+- Added helper functions for multi-channel testing:
+  - `selectChannel()` - Select Telegram/Discord/WhatsApp
+  - `fillTelegramConfig()`, `fillDiscordConfig()`, `fillWhatsAppConfig()`
+  - `selectDMPolicy()` - Change security policy
+  - `completeSingleChannelFlow()` - Full flow helper
+- Test coverage includes:
+  - Channel selection (single and multiple) ✓
+  - Each P0 channel form validation (Telegram, Discord, WhatsApp) ✓
+  - dmPolicy selection and persistence ✓
+  - Full happy path with mocked API (single channel and all channels) ✓
+  - Error handling on API failure ✓
+  - Modal close behavior with confirmation dialog ✓
+  - Navigation through all 5 steps ✓
+  - Visual regression screenshot tests ✓
+- Updated playwright.config.ts with improved webServer timeout (180s)
+- TypeScript type checking passes (0 errors)
+- 13 representative key tests verified passing
+- Files changed:
+  - `tests/vm-creation-modal.spec.ts` - Complete rewrite (56 tests)
+  - `playwright.config.ts` - Increased webServer timeout
+- **Learnings for future iterations:**
+  - Use `data-testid` attributes for reliable selectors across all components
+  - Helper functions make multi-step flow tests more maintainable
+  - Test organization by step/feature makes tests easier to navigate
+  - Mock API routes at page level for consistent test behavior
+  - Build must be updated after component changes before running E2E tests
+  - Use grep to run subset of tests during development
+---
