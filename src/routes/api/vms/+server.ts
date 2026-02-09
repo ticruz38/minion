@@ -1,8 +1,10 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { error } from '@sveltejs/kit';
 import { z } from 'zod';
+import { nanoid } from 'nanoid';
 import Redis, { type RedisOptions } from 'ioredis';
-import { getHealthyVms, type VMWithHealth } from '$lib/server/scheduler.js';
+import { getHealthyVms, selectBestVm, type VMWithHealth } from '$lib/server/scheduler.js';
+import { registerBot, sendCommand, type BotConfig, type BotCommand } from '$lib/server/bot-service.js';
 
 
 /**
@@ -228,10 +230,57 @@ function buildRedisPayload(request: VMCreationRequest, commandId: string): Recor
 }
 
 /**
+ * Build the bot configuration from the VM creation request
+ */
+function buildBotConfigFromVmRequest(request: VMCreationRequest): BotConfig {
+	// Support both legacy (token) and new (channels) formats
+	let channels: ChannelsConfig;
+	
+	if (request.channels) {
+		channels = request.channels as ChannelsConfig;
+	} else if (request.token) {
+		channels = {
+			telegram: {
+				enabled: true,
+				token: request.token,
+				dmPolicy: 'pairing'
+			}
+		};
+	} else {
+		throw new Error('No channel configuration provided');
+	}
+	
+	return {
+		name: request.name,
+		channels
+	};
+}
+
+/**
+ * Build the CREATE command payload per Redis Protocol
+ */
+function buildCreateCommand(
+	botId: string,
+	teamId: string,
+	profiles: string[],
+	config: BotConfig
+): BotCommand {
+	return {
+		type: 'CREATE',
+		bot_id: botId,
+		team_id: teamId,
+		profiles,
+		config
+	};
+}
+
+/**
  * POST /api/vms
  * 
- * Creates a new VM by publishing configuration to Redis.
- * Called when user completes the VM creation modal flow.
+ * ⚠️ DEPRECATED: Use POST /api/bots instead
+ * 
+ * This endpoint is kept for backward compatibility.
+ * It now forwards to the new bot creation logic.
  * 
  * Request body: {
  *   id: string;            // Required: UUID v4 for Redis subscription correlation
@@ -246,7 +295,7 @@ function buildRedisPayload(request: VMCreationRequest, commandId: string): Recor
  *   minionId: string;      // Selected minion type
  * }
  * 
- * Response: HTTP 202 Accepted
+ * Response: HTTP 202 Accepted (with X-Deprecated header)
  * {
  *   success: boolean;
  *   message: string;
@@ -255,6 +304,9 @@ function buildRedisPayload(request: VMCreationRequest, commandId: string): Recor
  * }
  */
 export const POST: RequestHandler = async ({ request }) => {
+	// Log deprecation warning
+	console.warn('[DEPRECATED] POST /api/vms is deprecated, use POST /api/bots');
+	
 	try {
 		// Parse request body
 		const body = await request.json();
@@ -272,39 +324,71 @@ export const POST: RequestHandler = async ({ request }) => {
 				success: false,
 				message: 'Validation failed',
 				errors
-			}, { status: 400 });
+			}, { 
+				status: 400,
+				headers: { 'X-Deprecated': 'true' }
+			});
 		}
 		
 		const validatedData = validationResult.data;
 		
-		// Use the provided command ID (UUID v4) for Redis correlation
-		const commandId = validatedData.id;
+		// Get healthy VMs and select the best one (new bot creation logic)
+		const healthyVms = await getHealthyVms();
+		const selectedVm = selectBestVm(healthyVms);
 		
-		// Build Redis payload
-		const redisPayload = buildRedisPayload(validatedData, commandId);
-		
-		// Publish to Redis
-		const redis = getRedisClient();
-		
-		if (redis) {
-			// Publish to clawd:commands channel
-			await redis.publish('clawd:commands', JSON.stringify(redisPayload));
-			console.log(`[VM Creation] Published VM creation for ${validatedData.name} (ID: ${commandId})`);
-		} else {
-			// In development/demo mode, just log the config
-			console.log('[VM Creation] Demo mode - VM config:', JSON.stringify(redisPayload, null, 2));
+		if (!selectedVm) {
+			return json({
+				success: false,
+				message: 'No healthy VMs available. Please try again later.'
+			}, { 
+				status: 503,
+				headers: { 'X-Deprecated': 'true' }
+			});
 		}
 		
-		// Return HTTP 202 Accepted with command ID for async processing
+		// Generate unique bot ID
+		const botId = `bot_${nanoid(10)}`;
+		const vmId = selectedVm.vm_id;
+		
+		// For deprecated endpoint, use a default team_id if not provided
+		const teamId = body.team_id || 'default';
+		
+		// Build bot configuration
+		const botConfig = buildBotConfigFromVmRequest(validatedData);
+		
+		// Register bot in Redis
+		await registerBot(
+			botId,
+			vmId,
+			teamId,
+			[validatedData.minionId],
+			botConfig
+		);
+		
+		// Build and send CREATE command to VM queue
+		const createCommand = buildCreateCommand(
+			botId,
+			teamId,
+			[validatedData.minionId],
+			botConfig
+		);
+		await sendCommand(vmId, createCommand);
+		
+		console.log(`[VM Creation - DEPRECATED] Created bot ${botId} for team ${teamId} on VM ${vmId}`);
+		
+		// Return HTTP 202 Accepted with deprecation header (maintaining old response format for compatibility)
 		return json({
 			success: true,
-			message: 'VM creation request accepted for processing',
-			commandId,  // Frontend uses this to subscribe to Redis clawd:responses
+			message: 'VM creation request accepted for processing (deprecated endpoint, use POST /api/bots)',
+			commandId: validatedData.id,  // Keep old commandId for compatibility
 			vm: {
 				name: validatedData.name,
 				minionId: validatedData.minionId
 			}
-		}, { status: 202 });  // 202 Accepted - async processing
+		}, { 
+			status: 202,  // Keep old status code for compatibility
+			headers: { 'X-Deprecated': 'true' }
+		});
 		
 	} catch (err) {
 		console.error('[VM Creation Error]', err);
@@ -316,7 +400,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		return json({
 			success: false,
 			message: err instanceof Error ? err.message : 'Failed to create VM'
-		}, { status: 500 });
+		}, { 
+			status: 500,
+			headers: { 'X-Deprecated': 'true' }
+		});
 	}
 };
 
