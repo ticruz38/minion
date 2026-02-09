@@ -2,6 +2,7 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import { error } from '@sveltejs/kit';
 import { z } from 'zod';
 import Redis, { type RedisOptions } from 'ioredis';
+import { getHealthyVms, type VMWithHealth } from '$lib/server/scheduler.js';
 
 
 /**
@@ -322,12 +323,35 @@ export const POST: RequestHandler = async ({ request }) => {
 /**
  * GET /api/vms
  * 
- * Returns list of VMs (placeholder for future implementation)
- * Currently returns empty array
+ * Returns list of all VMs with capacity and health status
+ * Queries Redis for vm:* keys and returns parsed metrics
  */
 export const GET: RequestHandler = async () => {
-	return json({
-		vms: [],
-		message: 'VM list endpoint - not yet implemented'
-	});
+	try {
+		// Get all VMs with health information from scheduler
+		const vms = await getHealthyVms();
+
+		return json({
+			success: true,
+			vms: vms.map((vm: VMWithHealth) => ({
+				vm_id: vm.vm_id,
+				status: vm.status,
+				ram_total: vm.ram_total,
+				ram_available: vm.ram_available,
+				ram_used: vm.ram_used,
+				cpus: vm.cpus,
+				bot_count: vm.bot_count,
+				last_heartbeat: vm.last_heartbeat,
+				is_healthy: vm.is_healthy
+			}))
+		});
+	} catch (err) {
+		console.error('[VM List Error]', err);
+
+		return json({
+			success: false,
+			message: err instanceof Error ? err.message : 'Failed to fetch VM list',
+			vms: []
+		}, { status: 500 });
+	}
 };

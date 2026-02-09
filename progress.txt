@@ -28,6 +28,20 @@
   - Same error handling pattern: check bot exists, return 404 if not, proceed with command
 ---
 
+## 2026-02-09 14:00:00 - US-011
+- Updated GET /api/vms endpoint to return VM capacity and health status
+- Imported getHealthyVms and VMWithHealth type from scheduler service
+- GET handler now queries Redis for all healthy VMs and returns parsed metrics
+- Returns vm_id, status, ram_total, ram_available, ram_used, cpus, bot_count, last_heartbeat, is_healthy
+- Includes proper error handling with 500 status on failure
+- Files changed: src/routes/api/vms/+server.ts
+- **Learnings for future iterations:**
+  - Reuse existing service functions from scheduler.ts for VM queries
+  - The getHealthyVms() function already returns VMs with is_healthy flag computed
+  - VM metrics are already parsed (numbers) by the scheduler service
+  - Response format: { success: true, vms: [...] } with all VM fields
+---
+
 ## Codebase Patterns
 - Use `type RedisOptions` import from 'ioredis' instead of `Redis.RedisOptions` namespace
 - Always type callback parameters like `(times: number)` to avoid implicit any
