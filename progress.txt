@@ -1,3 +1,18 @@
+## 2026-02-09 13:57:52 - US-009
+- Created POST /api/bots/[id]/delete endpoint at src/routes/api/bots/[id]/delete/+server.ts
+- Implemented POST handler that extracts id from params
+- Uses getBot() from bot-service to fetch bot from Redis, returns 404 if not found
+- Sends DELETE command to VM queue using sendCommand() with parsed profiles and config
+- Calls deleteBot() from bot-service to remove bot from Redis (removes from team set and deletes bot hash)
+- Follows same pattern as stop/start endpoints with type: 'DELETE'
+- Files changed: src/routes/api/bots/[id]/delete/+server.ts
+- **Learnings for future iterations:**
+  - Delete endpoint is similar to stop/start but calls deleteBot() instead of updateBotStatus()
+  - Use type: 'DELETE' in BotCommand payload for delete operations
+  - deleteBot() removes from team:{team_id}:bots set and deletes bot:{bot_id} hash
+  - No status update needed since bot is permanently removed
+---
+
 ## 2026-02-09 13:57:00 - US-008
 - Created POST /api/bots/[id]/start endpoint at src/routes/api/bots/[id]/start/+server.ts
 - Implemented POST handler that extracts id from params
@@ -122,4 +137,21 @@ Started: Mon Feb  9 01:47:00 PM CET 2026
   - Parse stored JSON fields (profiles, config) before sending as command payload
   - Follow the same pattern: check bot exists, send command, update status, return success
   - Stop command uses type: 'STOP' in the BotCommand payload
+---
+
+## 2026-02-09 13:59:10 - US-010
+- Created POST /api/bots/[id]/credits endpoint at src/routes/api/bots/[id]/credits/+server.ts
+- Implemented POST handler that extracts id from params
+- Validates request body: { amount: number }, amount must be positive integer
+- Uses getBot() from bot-service to fetch bot from Redis, returns 404 if not found
+- Sends CREDIT_ADD command to VM queue using sendCommand() with amount included
+- Returns 200 with success message including bot_id and amount on success
+- Returns 400 for invalid amount (non-integer, zero, or negative)
+- Files changed: src/routes/api/bots/[id]/credits/+server.ts
+- **Learnings for future iterations:**
+  - Credits endpoint is similar to stop/start but validates request body first
+  - Amount validation: must be a positive integer (Number.isInteger(amount) && amount > 0)
+  - Use type: 'CREDIT_ADD' in BotCommand payload for credit operations
+  - The bot-service already has CREDIT_ADD command type and amount field ready
+  - Response includes the amount that was added for confirmation
 ---
