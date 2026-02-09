@@ -3,7 +3,7 @@ import { error } from '@sveltejs/kit';
 import { z } from 'zod';
 import { nanoid } from 'nanoid';
 import { getHealthyVms, selectBestVm } from '$lib/server/scheduler.js';
-import { registerBot, sendCommand, type BotConfig, type BotCommand } from '$lib/server/bot-service.js';
+import { registerBot, sendCommand, getTeamBots, type BotConfig, type BotCommand } from '$lib/server/bot-service.js';
 
 /**
  * DM Policy types for channel security configuration
@@ -270,12 +270,48 @@ export const POST: RequestHandler = async ({ request }) => {
 /**
  * GET /api/bots
  * 
- * Placeholder for listing bots - will be implemented in US-005
- * Currently returns empty array
+ * List all bots for a team.
+ * Called when user wants to view their team's bots.
+ * 
+ * Query params: ?team_id=<team_id>
+ * 
+ * Response: HTTP 200 OK
+ * {
+ *   success: boolean;
+ *   bots: Bot[];           // Array of bot objects with all Redis fields
+ * }
+ * 
+ * Error: HTTP 400 (missing team_id)
  */
-export const GET: RequestHandler = async () => {
-	return json({
-		bots: [],
-		message: 'Bot list endpoint - to be implemented in US-005'
-	});
+export const GET: RequestHandler = async ({ url }) => {
+	try {
+		// Parse team_id query parameter
+		const teamId = url.searchParams.get('team_id');
+		
+		if (!teamId) {
+			return json({
+				success: false,
+				message: 'Missing required query parameter: team_id'
+			}, { status: 400 });
+		}
+		
+		// Get all bots for the team from Redis
+		const bots = await getTeamBots(teamId);
+		
+		console.log(`[Bot List] Retrieved ${bots.length} bots for team ${teamId}`);
+		
+		// Return array of bot objects with all Redis fields
+		return json({
+			success: true,
+			bots
+		}, { status: 200 });
+		
+	} catch (err) {
+		console.error('[Bot List Error]', err);
+		
+		return json({
+			success: false,
+			message: err instanceof Error ? err.message : 'Failed to retrieve bots'
+		}, { status: 500 });
+	}
 };

@@ -2,6 +2,11 @@
 - Use `type RedisOptions` import from 'ioredis' instead of `Redis.RedisOptions` namespace
 - Always type callback parameters like `(times: number)` to avoid implicit any
 - Use `npm run check` for TypeScript type checking
+- Import specific functions from bot-service: `import { func1, func2 } from '$lib/server/bot-service.js'`
+- Query parameters in SvelteKit: `const teamId = url.searchParams.get('team_id')`
+- Use `type RedisOptions` import from 'ioredis' instead of `Redis.RedisOptions` namespace
+- Always type callback parameters like `(times: number)` to avoid implicit any
+- Use `npm run check` for TypeScript type checking
 
 ## Ralph Progress Log
 Started: Mon Feb  9 01:47:00 PM CET 2026
@@ -59,4 +64,17 @@ Started: Mon Feb  9 01:47:00 PM CET 2026
   - VM command queue uses Redis list: vm:{vm_id}:queue
   - JSON fields need to be stringified before storing in Redis hash
   - Pipelining pattern for batch fetching: create pipeline, add commands, then exec()
+---
+
+## 2026-02-09 13:53:00 - US-005
+- Implemented GET /api/bots endpoint for listing team bots
+- Added import for getTeamBots from bot-service
+- Implemented GET handler that parses team_id query parameter
+- Returns 400 if team_id is missing, 200 with bots array on success
+- Reuses existing getTeamBots() function from bot-service
+- Files changed: src/routes/api/bots/+server.ts
+- **Learnings for future iterations:**
+  - Query parameters in SvelteKit are accessed via `url.searchParams.get('param')`
+  - The bot-service module already has getTeamBots() that returns parsed Bot objects
+  - Follow existing error response pattern: `{ success: false, message: '...' }`
 ---
