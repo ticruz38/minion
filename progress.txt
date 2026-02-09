@@ -7,6 +7,8 @@
 - Use `type RedisOptions` import from 'ioredis' instead of `Redis.RedisOptions` namespace
 - Always type callback parameters like `(times: number)` to avoid implicit any
 - Use `npm run check` for TypeScript type checking
+- Path parameters in SvelteKit: `const botId = params.id`
+- Return 404 pattern for not found: `{ success: false, message: '...' }` with status 404
 
 ## Ralph Progress Log
 Started: Mon Feb  9 01:47:00 PM CET 2026
@@ -77,4 +79,32 @@ Started: Mon Feb  9 01:47:00 PM CET 2026
   - Query parameters in SvelteKit are accessed via `url.searchParams.get('param')`
   - The bot-service module already has getTeamBots() that returns parsed Bot objects
   - Follow existing error response pattern: `{ success: false, message: '...' }`
+---
+
+## 2026-02-09 13:54:00 - US-006
+- Created GET /api/bots/[id] endpoint at src/routes/api/bots/[id]/+server.ts
+- Implemented GET handler that extracts id from params
+- Uses getBot() from bot-service to fetch bot from Redis
+- Returns 404 if bot not found in Redis
+- Returns bot object with all fields on success
+- Files changed: src/routes/api/bots/[id]/+server.ts
+- **Learnings for future iterations:**
+  - Path parameters in SvelteKit are accessed via `params.id` (no brackets)
+  - The [id] directory name indicates a dynamic route parameter
+  - Follow existing pattern: check if bot exists, return 404 if not, return bot data if found
+  - Error response pattern for not found: `{ success: false, message: 'Bot not found: ${botId}' }` with status 404
+---
+## 2026-02-09 13:56:47 - US-007
+- Created POST /api/bots/[id]/stop endpoint at src/routes/api/bots/[id]/stop/+server.ts
+- Implemented POST handler that extracts id from params
+- Uses getBot() from bot-service to fetch bot from Redis, returns 404 if not found
+- Sends STOP command to VM queue using sendCommand() with parsed profiles and config
+- Updates bot status to 'stopped' using updateBotStatus()
+- Imported BotConfig type from bot-service for proper type safety
+- Files changed: src/routes/api/bots/[id]/stop/+server.ts
+- **Learnings for future iterations:**
+  - Need to import and use `BotConfig` type from bot-service for proper type checking
+  - Parse stored JSON fields (profiles, config) before sending as command payload
+  - Follow the same pattern: check bot exists, send command, update status, return success
+  - Stop command uses type: 'STOP' in the BotCommand payload
 ---
