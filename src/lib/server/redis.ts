@@ -3,7 +3,7 @@
  * Subscribes to 'clawd:responses' channel for async VM creation events
  */
 
-import Redis from 'ioredis';
+import Redis, { type RedisOptions } from 'ioredis';
 
 // VM Status event types
 export type VMStatus = 
@@ -101,10 +101,10 @@ export class VMStatusSubscriber {
     const isTls = url.protocol === 'rediss:';
     
     // Build connection options
-    const connectionOptions: Redis.RedisOptions = {
+    const connectionOptions: RedisOptions = {
       host: url.hostname,
       port: parseInt(url.port, 10) || (isTls ? 443 : 6379),
-      retryStrategy: (times) => Math.min(times * 50, 2000),
+      retryStrategy: (times: number) => Math.min(times * 50, 2000),
       maxRetriesPerRequest: 3,
     };
     
