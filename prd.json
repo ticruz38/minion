@@ -189,7 +189,7 @@
         "Typecheck passes"
       ],
       "priority": 12,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-004. For backward compatibility during transition."
     }
   ]

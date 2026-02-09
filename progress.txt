@@ -169,3 +169,20 @@ Started: Mon Feb  9 01:47:00 PM CET 2026
   - The bot-service already has CREDIT_ADD command type and amount field ready
   - Response includes the amount that was added for confirmation
 ---
+
+## 2026-02-09 14:02:12 - US-012
+- Deprecated old VM creation endpoint at src/routes/api/vms/+server.ts
+- Added deprecation warning log: `console.warn('[DEPRECATED] POST /api/vms is deprecated, use POST /api/bots')`
+- Added deprecation header in all responses: `X-Deprecated: true`
+- Forwarded request to new bot creation logic using scheduler service and bot-service
+- Updated imports to include nanoid, scheduler functions, and bot-service functions
+- Created helper functions `buildBotConfigFromVmRequest()` and `buildCreateCommand()` for compatibility
+- Maintained backward compatibility with old response format (202 status, commandId, vm object)
+- Files changed: src/routes/api/vms/+server.ts
+- **Learnings for future iterations:**
+  - Deprecation pattern: Add console.warn at function start + X-Deprecated header on all response paths
+  - Forwarding logic reuses new service functions but adapts request/response format for compatibility
+  - Old endpoint uses `id` field as commandId, new endpoint doesn't require it
+  - Default team_id 'default' is used when not provided in old format
+  - Keep same HTTP status codes (202) and response structure for backward compatibility
+---
