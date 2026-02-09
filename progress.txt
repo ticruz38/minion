@@ -25,6 +25,22 @@ Started: Mon Feb  9 01:47:00 PM CET 2026
   - Use `redis.keys('vm:*')` to find all VM keys, then pipeline for efficient fetching
   - parseFloat/parseInt needed for numeric fields since Redis stores everything as strings
   - Reused the same TLS connection pattern from redis.ts (parsing URL, checking rediss:// protocol)
+## 2026-02-09 13:52:00 - US-004
+- Created new bot creation endpoint at src/routes/api/bots/+server.ts
+- Implemented POST handler using getHealthyVms() + selectBestVm() from scheduler
+- Returns 503 if no VMs available
+- Generates bot ID using bot_${nanoid(10)} format
+- Builds CREATE command payload per Redis Protocol
+- Calls registerBot() and sendCommand() from bot-service
+- Kept existing channel validation schemas (Telegram/Discord/WhatsApp)
+- Files changed: src/routes/api/bots/+server.ts
+- **Learnings for future iterations:**
+  - New bot creation uses per-VM queues instead of pub/sub
+  - Bot IDs are generated with nanoid: bot_${nanoid(10)}
+  - The endpoint returns 201 on success, 503 when no VMs available
+  - Old /api/vms endpoint is kept for backward compatibility (will be deprecated in US-012)
+---
+
 ---
 
 ## 2026-02-09 13:50:00 - US-003

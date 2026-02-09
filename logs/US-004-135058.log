@@ -161,154 +161,200 @@
 │ - Keep CI green                                                              │
 │ - Read the Codebase Patterns section in progress.txt before starting         │
 ╰──────────────────────────────────────────────────────────────────────────────╯
-• Let me start by reading the PRD file and progress log to understand what needs
-  to be done.
+• Let me start by reading the PRD file and the progress log to understand what n
+  eeds to be done.
 • Used ReadFile (prd.json)
 • Used ReadFile (progress.txt)
-• Let me analyze the current state:
+• Alright, I've gone through the prd.json and the current progress.txt. US-001,
+  US-002, and US-003 are all marked as passing. The next item on the list is US-
+  004: 'Rename and refactor create bot endpoint'.
 
-  1. US-001 and US-002 are marked as complete.
-  2. US-003 is marked as false, which means it's the next task on the list.
+  Hmm... the requirements for US-004 are quite specific. It involves renaming sr
+  c/routes/api/vms/+server.ts to src/routes/api/bots/+server.ts. But wait, I can
+  't just move the file and be done with it. The logic inside needs to be refact
+  ored to use the new scheduler services like getHealthyVms() and selectBestVm()
+  .
 
-  US-003 requires me to create a bot service module at src/lib/server/bot-servic
-  e.ts. I need to implement several Redis operations for bot lifecycle managemen
-  t.
+  Actually, looking at the file structure again, I need to be careful. If I rena
+  me the file, I'm essentially changing the API route from /api/vms to /api/bots
+  . I should verify the existing code in src/lib/server/bot-service.ts and src/l
+  ib/server/scheduler.ts first to make sure the functions I need to call actuall
+  y exist and match the signatures required by the new endpoint.
 
-  Hmm, I should check how the project handles Redis connections and what convent
-  ions are already in place. Looking at src/lib/server/redis.ts seems like a log
-  ical starting point to ensure my implementation follows the existing patterns.
+  Wait, there's more. I also need to keep an eye on US-012, which talks about ke
+  eping the old VM endpoint for backward compatibility. If I'm renaming the file
+  for US-004, how does that affect the 'keeping the old one' part of US-012? It'
+  s possible I'll need to look at how to maintain both routes or ensure the tran
+  sition is smooth.
 
-  Wait, before I dive into the code, I need to make sure I'm working on the corr
-  ect branch. The instructions mention ralph/bot-orchestration-api. I'll check t
-  he current branch and switch if necessary to keep the environment consistent.
+  Before I start hacking away at the file system and the code, I need to see the
+  current implementation of the VM creation logic. I also need to check the proj
+  ect structure to see if there are other dependencies or route handlers I might
+  break. I'll start by examining the current VM route and getting a list of all
+  relevant source files to ensure I have a complete picture of the impact.
+• Now I understand the project. I can see that US-001, US-002, and US-003 are al
+  ready complete. The next story to work on is US-004 - "Rename and refactor cre
+  ate bot endpoint".
 
-  Actually, let me also quickly list the files in the src/lib/server/ directory.
-  This will help me see if there are other existing service modules I should be
-  aware of or if there are specific naming conventions beyond the basic PRD requ
-  irements.
-
-  I'll start by reading the existing Redis service and checking my git status an
-  d branch.
-• Let me check the current branch and read the existing Redis service to underst
-  and the patterns:
-• Used Shell (cd /root/code/minion && git branch --show-current)
-• Used ReadFile (src/lib/server/redis.ts)
-• Used Glob (src/lib/server/*)
-• Let me also read the scheduler.ts file to understand the patterns used there:
-• Used ReadFile (src/lib/server/scheduler.ts)
+  Let me first check the current state of the files I'll need to work with:
 • Used ReadFile (src/routes/api/vms/+server.ts)
-• I have a solid understanding of the requirements for US-003. I need to impleme
-  nt the core Bot Service logic in src/lib/server/bot-service.ts. This service i
-  s the primary interface for bot lifecycle management, utilizing Redis for stat
-  e persistence and queue management.
+• Used Glob (src/**/*.ts)
+• I have successfully completed US-001 through US-003, establishing the foundati
+  onal services for the Minion project. Now, the next step in the sprint is US-0
+  04: "Rename and refactor create bot endpoint". This task is pivotal as it tran
+  sitions the system from a generic VM-centric API to a specialized bot-orchestr
+  ation interface.
 
-  Key functionalities to implement:
+  Looking at the current file structure, the logic for creating a bot is current
+  ly housed in src/routes/api/vms/+server.ts. The requirements for US-004 are qu
+  ite specific: I need to move this to src/routes/api/bots/+server.ts and overha
+  ul the internal logic. Instead of the existing manual Redis interactions, the
+  new endpoint must leverage the getHealthyVms() and selectBestVm() utilities I
+  built in US-002.
 
-  1. Registration: registerBot(botId, vmId, teamId, profiles, config) will use H
-     for bot details and SADD to link the bot to its team.
-  2. Retrieval: getBot(botId) via HGETALL and getTeamBots(teamId) using SMEMBERS
-     llowed by a pipelined fetch for efficiency.
-  3. Status & Deletion: updateBotStatus(botId, status) via HSET and deleteBot(bo
-     ) which must handle SREM from the team set and DEL from the bot hash.
-  4. Command Queue: sendCommand(vmId, command) will use LPUSH to place commands
-     o a VM-specific queue.
+  Hmm... I also need to address the ID generation. The instructions specify a bo
+  t_${nanoid(10)} format. This means I'll need to integrate the nanoid library h
+  ere. Furthermore, the Redis command structure needs to be formalized according
+  to the new Protocol. It’s not just a simple rename; it's a significant refacto
+  r of the POST handler. If no VMs are available to host the bot, the system mus
+  t return a 503 Service Unavailable error, which adds a layer of resilience I n
+  eed to implement carefully.
 
-  Wait, I need to ensure I'm following the existing architectural patterns for R
-  edis interaction. Based on my review of the codebase, I should use a singleton
-  Redis client with proper TLS configuration (as seen in the scheduler service)
-  to avoid connection leaks and ensure secure communication. I also need to deci
-  de on a consistent key structure. Using prefixes like bot: and team: aligns wi
-  th the existing vm: convention.
+  Wait, I also have US-012 on the horizon, which involves keeping the old /api/v
+  ms endpoint for backward compatibility. This creates a bit of a puzzle regardi
+  ng file management. If I rename the file now, I lose the original implementati
+  on that US-012 might need to reference or preserve. If I copy it, I risk diver
+  gence.
 
-  Before I proceed with the implementation, I must verify that the project is in
-  a stable state. I need to ensure that the nanoid dependency required for bot I
-  D generation is properly installed and that the existing code passes type-chec
-  king. This will prevent environment-related errors from interfering with the d
-  evelopment and testing of the new service.
+  Actually, before I get bogged down in the implementation details of the new en
+  dpoint or the architectural implications of maintaining two separate APIs, I n
+  eed to verify the environment. I've been using nanoid for the ID generation in
+  my recent services. Is it actually listed in the project dependencies? If I tr
+  y to use import { nanoid } from 'nanoid' in the new endpoint and it isn't ther
+  e, the build will fail immediately. I should also confirm if zod and ioredis a
+  re present, as they will be essential for request validation and Redis communi
+  cation in the new bot service.
 
-  I will now create the bot-service.ts file with these Redis operations and then
-  run the necessary checks to validate the environment.
-• Now I have a good understanding of the codebase patterns. Let me create the bo
-  t service module (US-003):
-• Used WriteFile (src/lib/server/bot-service.ts)
-• Now let me run the typecheck to make sure everything is correct:
-• Now let me run the typecheck to verify everything is correct:
+  Unless I confirm the current state of package.json, I'm working in the dark. I
+  t's better to verify the available tools and libraries before I start moving f
+  iles around. This will also tell me if there are any other utility libraries a
+  lready present that I could use for the command payload construction.
+
+  Therefore, my first action should be to inspect the package manifest to ensure
+  all required dependencies are in place. This will allow me to proceed with the
+  refactoring with confidence, knowing that the environment is correctly set up
+  for the new bot-centric logic.
+
+  Let me check the existing services and dependencies:
+• Let me check the existing services and dependencies:
+• Used ReadFile (src/lib/server/scheduler.ts)
+• Used ReadFile (src/lib/server/bot-service.ts)
+• Used ReadFile (package.json)
+• I have completed the preliminary research phase. The existing src/routes/api/v
+  ms/+server.ts currently handles VM creation using a pub/sub mechanism and UUID
+  -based identification. However, the new requirements specify a transition to a
+  bot-centric model using per-VM queues and the nanoid library for ID generation
+  .
+
+  Hmm, looking at the bot-service.ts and scheduler.ts files I've reviewed, it's
+  clear that the infrastructure for bot management is already in place. The logi
+  cal next step for US-004 is to establish the new API route at /api/bots. This
+  isn't just a simple rename; it's a refactor of the creation logic to utilize t
+  he scheduler for VM selection and the bot service for registration and queuing
+  .
+
+  Wait, I must ensure that the new implementation correctly uses nanoid for the
+  bot_id as requested. The existing vms endpoint uses UUIDs, but the new spec is
+  explicit about bot_${nanoid(10)}. This distinction is important for the new bo
+  t orchestration logic.
+
+  Actually, before I can write the logic for the new endpoint, I need to set up
+  the file structure. Since I'm moving from /api/vms to /api/bots, I'll need to
+  create the bots directory within the routes hierarchy to house the new +server
+  .ts file. This aligns with the SvelteKit routing structure used in this projec
+  t.
+• Now I have all the context needed. Let me implement US-004. I'll:
+
+  1. Create the new /api/bots endpoint with the refactored logic
+  2. Keep the old /api/vms for backward compatibility (US-012 will add deprecati
+
+  Let me start by creating the new bots endpoint:
+• Used Shell (mkdir -p /root/code/minion/src/routes/api/bots)
+• Now let me create the new +server.ts file for /api/bots. This will be a refact
+  ored version that:
+
+  1. Uses getHealthyVms() and selectBestVm() from scheduler
+  2. Returns 503 if no VMs available
+  3. Generates bot ID using nanoid
+  4. Uses registerBot() and sendCommand() from bot-service
+  5. Keeps the channel validation schemas from the old endpoint
+• Used WriteFile (src/routes/api/bots/+server.ts)
+• I need to double-check the current state of the repository to ensure US-004 an
+  d the preparatory work for US-012 are correctly staged. I've implemented the n
+  ew src/routes/api/bots/+server.ts file to handle the refactored bot creation l
+  ogic using the scheduler and the nanoid ID format. This is a significant step,
+  but it's only half the battle for a clean migration.
+
+  Wait, I need to be careful about how I handle the legacy src/routes/api/vms/+s
+  erver.ts. The requirement for US-012 is to keep it for backward compatibility
+  while adding a deprecation warning. If I move or delete it now, I might break
+  existing clients. However, if I leave it as is, I'm not following the new arch
+  itectural requirements which mandate that bot creation should primarily go thr
+  ough the new endpoint.
+
+  Actually, looking at the file structure, simply leaving the old file in place
+  means the POST request to /api/vms will continue to function, but it won't ben
+  efit from the new logic. To properly implement the deprecation strategy, I sho
+  uld first check the exact imports and dependencies in the old VM route. It lik
+  ely imports from a shared module or uses internal logic that I've now moved to
+  bots/+server.ts.
+
+  Unless I verify the content of the old file, I might miss a critical dependenc
+  y. For example, does the old VM endpoint rely on a specific version of the req
+  uest handler that I've since updated? Or does it use a different validation sc
+  hema? I need to see the code to determine if the old endpoint should simply be
+  a proxy to the new one, or if it needs to maintain its own isolated (but depre
+  cated) logic.
+
+  Let me run the type check to see if everything is correct:
+• Let me run the type check to see if everything is correct:
 • Used Shell (cd /root/code/minion && npm run check 2>&1)
-• The typecheck passed with 0 errors. The warnings are pre-existing and not rela
-  ted to my changes. Now let me update the PRD to mark US-003 as complete and ap
-  pend to the progress log:
-• Typecheck passes. Now let me update the PRD and progress log:
+• Type check passes. The warnings are pre-existing and not related to my changes
+  .Now let me run the tests to make sure I haven't broken anything:
+• Type check passes. Let me also run the tests:
+• Used Shell (cd /root/code/minion && npm run test 2>&1)
+• All tests pass. Now let me update the progress.txt file with my work and also
+  update the prd.json to set US-004 as passing.
+
+  Actually, wait - I need to re-read the requirements for US-004 more carefully.
+  The user story says: "Rename src/routes/api/vms/+server.ts to src/routes/api/b
+  ots/+server.ts"
+
+  But I created a NEW file at /api/bots and left the old /api/vms file in place.
+  This is actually what US-012 wants - keep the old endpoint for backward compat
+  ibility.
+
+  Let me check if this is correct:
+
+  • US-004: Rename and refactor create bot endpoint
+  • US-012: Deprecate old VM creation endpoint
+
+  Looking at US-012: "Keep POST handler in src/routes/api/vms/+server.ts for bac
+  kward compatibility"
+
+  So actually:
+
+  1. US-004 should create the new /api/bots endpoint (which I did)
+  2. US-012 will modify the old /api/vms endpoint to add deprecation warnings an
+     orward to new logic
+
+  So my implementation is correct. The /api/vms file still exists (to be depreca
+  ted in US-012), and I created the new /api/bots endpoint.
+
+  Let me update the progress.txt and prd.json:
+• All tests pass. Now let me update the progress.txt and mark US-004 as complete
+  in prd.json:
 • Used StrReplaceFile (prd.json)
-  No replacements made
-• Used StrReplaceFile (prd.json)
-• The second replacement worked. Let me verify the PRD was updated correctly and
-  then append to the progress log.
-• Used Shell (cd /root/code/minion && g...'"id": "US-003"' prd.json)
-• Let me also check the passes field:
-• Used Shell (cd /root/code/minion && g..."' prd.json | grep passes)
-  Failed with exit code: 1
-• Let me try a different approach to check the passes field:
-• Used Shell (cd /root/code/minion && g...": 3' prd.json | head -20)
-• Let me check the passes status more directly:
-• Used ReadFile (prd.json)
-• US-003 passes is now true. Now let me append to the progress log:
-• Now let me append the progress log:
-• Used WriteFile (progress.txt)
+• Used StrReplaceFile (progress.txt)
+• Now I need to commit the changes. Let me do that:
 • Now let me commit the changes:
-• Now let me commit the changes:
-• Used Shell (cd /root/code/minion && g...reate bot service module")
-• The commit is successful. Let me verify the final state by checking which stor
-  ies are remaining:
-• Let me verify the current state of the PRD:
-• Used Shell (cd /root/code/minion && grep '"passes":' prd.json)
-• I have successfully implemented US-003. Let me review what was accomplished an
-  d what remains in the project plan to ensure a smooth transition for the next
-  iteration.
-
-  Hmm, looking back at the requirements for the Bot Service module, I needed to
-  encapsulate all Redis interactions. By creating src/lib/server/bot-service.ts,
-  I've centralized the logic. I used HSET for individual bot records, which is i
-  deal for updating specific fields like status later without fetching the whole
-  object.
-
-  Wait, I should confirm the team-to-bot relationship logic. I used SADD to main
-  tain a team:{team_id}:bots set. This is definitely the right call for the 'Get
-  Team Bots' functionality, as it allows for O(1) membership checks and efficien
-  t retrieval of all bot IDs for a given team.
-
-  Actually, for the 'Send Command' feature, I decided to use LPUSH on a VM-speci
-  fic queue (vm:{vm_id}:queue). This moves us away from the previous pub/sub mod
-  el toward a more robust queue-based system where each VM processes its own bac
-  klog. This aligns perfectly with the goal of a scalable bot orchestration API.
-
-  I also ensured the Redis connection logic is consistent. I followed the single
-  ton pattern and TLS configuration found in scheduler.ts and redis.ts. This avo
-  ids redundant connections and keeps the server's resource usage predictable.
-
-  The type-check passed, and I've updated prd.json and progress.txt. There are s
-  till 9 user stories left to go. Since not all stories are finished, I'm ready
-  to wrap up this specific task. I've verified the code, the documentation, and
-  the commit. Everything is aligned with the PRD.
-• Summary
-
-  Completed US-003: Create bot service module
-
-  Created src/lib/server/bot-service.ts with the following exports:
-
-   Function            Description
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   registerBot()       Stores bot as hash bot:{bot_id}, adds to team:{team_id}:
-                       bots set
-   getBot()            Fetches single bot using HGETALL bot:{bot_id}
-   getTeamBots()       Gets all team bots using SMEMBERS + pipelined HGETALL
-   updateBotStatus()   Updates bot status field using HSET
-   deleteBot()         Removes from team set with SREM, deletes hash with DEL
-   sendCommand()       Queues command to VM using LPUSH vm:{vm_id}:queue
-
-  Files changed:
-
-  • src/lib/server/bot-service.ts (new)
-  • prd.json - marked US-003 as passing
-  • progress.txt - added learnings for future iterations
-
-  Status: 3/12 stories complete, 9 remaining (US-004 through US-012)
