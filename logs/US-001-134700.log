@@ -1,0 +1,280 @@
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ # Ralph Agent Instructions                                                   │
+│                                                                              │
+│ You are an autonomous coding agent working on a software project.            │
+│                                                                              │
+│ ## 🛡️ CRITICAL SAFETY RULES - NEVER VIOLATE                                   │
+│                                                                              │
+│ ### System Resource Protection                                               │
+│ The following actions are **STRICTLY PROHIBITED** and will cause harm to the │
+│ host system:                                                                 │
+│                                                                              │
+│ **Docker/Container Management:**                                             │
+│ - **NEVER** run `docker stop` without an explicit container name or ID       │
+│ - **NEVER** use `docker stop $(docker ps -q)` or any pattern that stops mult │
+│ iple/all containers                                                          │
+│ - **NEVER** run `docker rm -f $(docker ps -aq)` or similar mass-removal comm │
+│ ands                                                                         │
+│ - **ALWAYS** verify container names with `docker ps --filter name=<pattern>` │
+│ before stopping                                                              │
+│ - **ONLY** stop containers that were explicitly created by this session      │
+│ - **ONLY** stop containers using their explicit name: `docker stop <exact-co │
+│ ntainer-name>`                                                               │
+│                                                                              │
+│ **Process Management:**                                                      │
+│ - **NEVER** run `killall`, `pkill`, or similar commands without specific pro │
+│ cess names                                                                   │
+│ - **NEVER** use `kill -9` on system processes or processes you didn't start  │
+│ - **ONLY** terminate processes you explicitly started in this session        │
+│                                                                              │
+│ **Port/Network Conflicts:**                                                  │
+│ - If a port is in use, **USE A DIFFERENT PORT** instead of killing the proce │
+│ ss using it                                                                  │
+│ - Check what's running on a port with `lsof -i :<port>` or `ss -tlnp | grep  │
+│ <port>`                                                                      │
+│ - Prefer random/high ports (e.g., `docker run -p 0:8080`) to avoid conflicts │
+│                                                                              │
+│ **General Safety:**                                                          │
+│ - **NEVER** run commands that affect system-wide state unless explicitly req │
+│ uired by the PRD                                                             │
+│ - **NEVER** use wildcards or glob patterns with destructive commands (`rm`,  │
+│ `kill`, `stop`)                                                              │
+│ - When in doubt, be explicit and specific with resource names                │
+│                                                                              │
+│ ---                                                                          │
+│                                                                              │
+│ ## Your Task                                                                 │
+│                                                                              │
+│ 1. Read the PRD at `prd.json` (in the same directory as this file)           │
+│ 2. Read the progress log at `progress.txt` (check Codebase Patterns section  │
+│ first)                                                                       │
+│ 3. Check you're on the correct branch from PRD `branchName`. If not, check i │
+│ t out or create from main.                                                   │
+│ 4. Pick the **highest priority** user story where `passes: false`            │
+│ 5. Implement that single user story                                          │
+│ 6. Run quality checks (e.g., typecheck, lint, test - use whatever your proje │
+│ ct requires)                                                                 │
+│ 7. Update AGENTS.md files if you discover reusable patterns (see below)      │
+│ 8. If checks pass, commit ALL changes with message: `feat: [Story ID] - [Sto │
+│ ry Title]`                                                                   │
+│ 9. Update the PRD to set `passes: true` for the completed story              │
+│ 10. Append your progress to `progress.txt`                                   │
+│                                                                              │
+│ ## Progress Report Format                                                    │
+│                                                                              │
+│ APPEND to progress.txt (never replace, always append):                       │
+│ ```                                                                          │
+│ ## [Date/Time] - [Story ID]                                                  │
+│ - What was implemented                                                       │
+│ - Files changed                                                              │
+│ - **Learnings for future iterations:**                                       │
+│   - Patterns discovered (e.g., "this codebase uses X for Y")                 │
+│   - Gotchas encountered (e.g., "don't forget to update Z when changing W")   │
+│   - Useful context (e.g., "the evaluation panel is in component X")          │
+│ ---                                                                          │
+│ ```                                                                          │
+│                                                                              │
+│ The learnings section is critical - it helps future iterations avoid repeati │
+│ ng mistakes and understand the codebase better.                              │
+│                                                                              │
+│ ## Consolidate Patterns                                                      │
+│                                                                              │
+│ If you discover a **reusable pattern** that future iterations should know, a │
+│ dd it to the `## Codebase Patterns` section at the TOP of progress.txt (crea │
+│ te it if it doesn't exist). This section should consolidate the most importa │
+│ nt learnings:                                                                │
+│                                                                              │
+│ ```                                                                          │
+│ ## Codebase Patterns                                                         │
+│ - Example: Use `sql<number>` template for aggregations                       │
+│ - Example: Always use `IF NOT EXISTS` for migrations                         │
+│ - Example: Export types from actions.ts for UI components                    │
+│ ```                                                                          │
+│                                                                              │
+│ Only add patterns that are **general and reusable**, not story-specific deta │
+│ ils.                                                                         │
+│                                                                              │
+│ ## Update AGENTS.md Files                                                    │
+│                                                                              │
+│ Before committing, check if any edited files have learnings worth preserving │
+│ in nearby AGENTS.md files:                                                   │
+│                                                                              │
+│ 1. **Identify directories with edited files** - Look at which directories yo │
+│ u modified                                                                   │
+│ 2. **Check for existing AGENTS.md** - Look for AGENTS.md in those directorie │
+│ s or parent directories                                                      │
+│ 3. **Add valuable learnings** - If you discovered something future developer │
+│ s/agents should know:                                                        │
+│    - API patterns or conventions specific to that module                     │
+│    - Gotchas or non-obvious requirements                                     │
+│    - Dependencies between files                                              │
+│    - Testing approaches for that area                                        │
+│    - Configuration or environment requirements                               │
+│                                                                              │
+│ **Examples of good AGENTS.md additions:**                                    │
+│ - "When modifying X, also update Y to keep them in sync"                     │
+│ - "This module uses pattern Z for all API calls"                             │
+│ - "Tests require the dev server running on PORT 3000"                        │
+│ - "Field names must match the template exactly"                              │
+│                                                                              │
+│ **Do NOT add:**                                                              │
+│ - Story-specific implementation details                                      │
+│ - Temporary debugging notes                                                  │
+│ - Information already in progress.txt                                        │
+│                                                                              │
+│ Only update AGENTS.md if you have **genuinely reusable knowledge** that woul │
+│ d help future work in that directory.                                        │
+│                                                                              │
+│ ## Quality Requirements                                                      │
+│                                                                              │
+│ - ALL commits must pass your project's quality checks (typecheck, lint, test │
+│ )                                                                            │
+│ - Do NOT commit broken code                                                  │
+│ - Keep changes focused and minimal                                           │
+│ - Follow existing code patterns                                              │
+│                                                                              │
+│ ## Browser Testing (Required for Frontend Stories)                           │
+│                                                                              │
+│ For any story that changes UI, you MUST verify it works in the browser:      │
+│                                                                              │
+│ 1. Load the `dev-browser` skill                                              │
+│ 2. Navigate to the relevant page                                             │
+│ 3. Verify the UI changes work as expected                                    │
+│ 4. Take a screenshot if helpful for the progress log                         │
+│                                                                              │
+│ A frontend story is NOT complete until browser verification passes.          │
+│                                                                              │
+│ ## Stop Condition                                                            │
+│                                                                              │
+│ After completing a user story, check if ALL stories have `passes: true`.     │
+│                                                                              │
+│ If ALL stories are complete and passing, reply with:                         │
+│ <promise>COMPLETE</promise>                                                  │
+│                                                                              │
+│ If there are still stories with `passes: false`, end your response normally  │
+│ (another iteration will pick up the next story).                             │
+│                                                                              │
+│ ## Important                                                                 │
+│                                                                              │
+│ - Work on ONE story per iteration                                            │
+│ - Commit frequently                                                          │
+│ - Keep CI green                                                              │
+│ - Read the Codebase Patterns section in progress.txt before starting         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+• Let me start by reading the PRD file and the progress log to understand what n
+  eeds to be done.
+• Used ReadFile (prd.json)
+• Used ReadFile (progress.txt)
+• I've reviewed the prd.json and I'm currently on the main branch. Hmm, the inst
+  ructions clearly state I need to work on ralph/bot-orchestration-api. Wait, I
+  can't just start coding; I must ensure I'm on the correct feature branch to ma
+  intain the PR workflow. If I don't check it out now, I risk polluting the main
+  branch with incomplete changes. My first priority is switching contexts. I'll
+  check out the specified branch to align my local environment with the project
+  requirements before proceeding with any implementation details.
+• Used Shell (cd /root/code/minion && g...lph/bot-orchestration-api)
+• I'm now on the ralph/bot-orchestration-api branch. Let me start with US-001 wh
+  ich is to add the nanoid dependency. This is the highest priority story with p
+  asses: false.
+
+  Let me first check the existing package.json to see what's already there, and
+  also check the existing redis.ts file since US-002 needs to reuse its TLS conn
+  ection logic.
+• Now I'm on the correct branch. Let me start with US-001 (highest priority). Fi
+  rst, let me check the existing code structure:
+• Used ReadFile (package.json)
+• Used ReadFile (src/lib/server/redis.ts)
+• Used ReadFile (src/routes/api/vms/+server.ts)
+• I've reviewed the current implementation and the existing package.json. Hmm, I
+  notice nanoid is missing, even though it's a requirement for the new bot regis
+  tration logic. I can't proceed with generating unique bot IDs in bot-service.t
+  s without it. Also, the scheduler needs to start tracking VM heartbeats in Red
+  is. Wait, if I try to code these features now, the environment will throw modu
+  le resolution errors. It makes more sense to stabilize the dependencies first.
+  I'll install nanoid now so the subsequent service development goes smoothly. L
+  et's run the install command.
+• Now I understand the codebase. Let me start with US-001: Add nanoid dependency
+  .
+• Used Shell (cd /root/code/minion && npm install nanoid)
+• Good, nanoid is installed. Now let me run the typecheck to make sure everythin
+  g is working:
+• Used Shell (cd /root/code/minion && n...run check 2>&1 | head -50)
+• There are some pre-existing type errors in the codebase. These are not related
+  to US-001, but they are existing issues. The acceptance criteria for US-001 is
+  "Typecheck passes" but there are pre-existing errors that I didn't cause.
+
+  Let me see if these errors are related to the ioredis import. The issue is tha
+  t Redis is being used as both a value and a type. Let me check the imports in
+  redis.ts:
+
+  Looking at line 104, it says:
+
+  const connectionOptions: Redis.RedisOptions = {
+
+  This uses Redis as a namespace to access the RedisOptions type. But the import
+  is:
+
+  import Redis from 'ioredis';
+
+  The issue is that in some TypeScript configurations, when you import a default
+  export, you can't also use it as a namespace.
+
+  I should fix these type errors so that typecheck passes. Let me fix them.
+
+  Actually, let me first check if these errors are in the original code and not
+  something I caused. Looking at the file content I read earlier, these are inde
+  ed pre-existing issues.
+
+  Let me fix these type errors:
+• There are some pre-existing type errors in the codebase. Let me fix them so ty
+  pecheck passes:
+• Used StrReplaceFile (src/lib/server/redis.ts)
+• Used StrReplaceFile (src/routes/api/vms/+server.ts)
+• Good, now let me run the typecheck again to see if the errors are fixed:
+• Used Shell (cd /root/code/minion && n...run check 2>&1 | head -40)
+• It looks like the second replacement in the api/vms/+server.ts file didn't wor
+  k properly. Let me check the file and fix it:
+• Used ReadFile (src/routes/api/vms/+server.ts)
+• I see, the file uses tabs for indentation. Let me fix it with the correct inde
+  ntation:
+• Used StrReplaceFile (src/routes/api/vms/+server.ts)
+• Now let me run the typecheck again:
+• Used Shell (cd /root/code/minion && n...run check 2>&1 | head -30)
+• Typecheck now passes with 0 errors (only warnings which are pre-existing). Now
+  let me commit US-001 and update the PRD and progress.txt.
+
+  Let me commit the changes:
+• Typecheck passes (0 errors). Now let me commit US-001:
+• Used Shell (cd /root/code/minion && g... - Add nanoid dependency")
+• Now let me update the PRD to set US-001 as passing, and add to progress.txt:
+• Used StrReplaceFile (prd.json)
+• Used StrReplaceFile (progress.txt)
+• Now let me commit the PRD and progress.txt updates:
+• Used Shell (cd /root/code/minion && g... and update progress log")
+• I've successfully completed US-001:
+
+  1. Installed nanoid package
+  2. Fixed pre-existing type errors so typecheck passes
+  3. Committed the changes
+  4. Updated the PRD to mark US-001 as passing
+  5. Updated the progress.txt with learnings
+
+  US-001 is now complete. There are still many more stories to do (US-002 throug
+  h US-012), so I should end my response normally for the next iteration to pick
+  up US-002.
+• US-001 Complete! ✅
+
+  I've successfully implemented the nanoid dependency:
+
+  1. Installed nanoid package (npm install nanoid)
+  2. Fixed pre-existing type errors in src/lib/server/redis.ts and src/routes/ap
+     ms/+server.ts:
+    • Changed Redis.RedisOptions to RedisOptions (proper type import)
+    • Added explicit number type to times parameter
+  3. Typecheck passes (0 errors)
+  4. Committed all changes with proper messages
+  5. Updated PRD - US-001 now has passes: true
+  6. Updated progress.txt with codebase patterns and learnings
+
+  The next highest priority story is US-002: Create scheduler service module whi
+  ch will query VMs from Redis and select the best one based on available RAM.

@@ -1,0 +1,196 @@
+{
+  "project": "Minion",
+  "branchName": "ralph/bot-orchestration-api",
+  "description": "Align bot creation API with Clawd scheduler Redis protocol - implement VM selection, per-VM queues, bot lifecycle management",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add nanoid dependency",
+      "description": "As a developer, I need nanoid installed to generate unique bot IDs in format bot_{nanoid(10)}.",
+      "acceptanceCriteria": [
+        "Install nanoid package: npm install nanoid",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "Dependency for US-002, US-003, US-004"
+    },
+    {
+      "id": "US-002",
+      "title": "Create scheduler service module",
+      "description": "As a developer, I need a scheduler service to query VMs from Redis and select the best one based on available RAM.",
+      "acceptanceCriteria": [
+        "Create src/lib/server/scheduler.ts",
+        "Export getHealthyVms() that queries vm:* keys and filters by status === 'healthy' and heartbeat < 2 min",
+        "Export selectBestVm(vms) that returns VM with most ram_available (min 1GB free)",
+        "Reuse TLS connection logic from src/lib/server/redis.ts",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Existing code to reuse: src/lib/server/redis.ts for connection with TLS"
+    },
+    {
+      "id": "US-003",
+      "title": "Create bot service module",
+      "description": "As a developer, I need a bot service to handle all Redis operations for bot lifecycle management.",
+      "acceptanceCriteria": [
+        "Create src/lib/server/bot-service.ts",
+        "Export registerBot(botId, vmId, teamId, profiles, config) using HSET bot:{bot_id} and SADD team:{team_id}:bots",
+        "Export getBot(botId) using HGETALL bot:{bot_id}",
+        "Export getTeamBots(teamId) using SMEMBERS + pipelined HGETALL",
+        "Export updateBotStatus(botId, status) using HSET",
+        "Export deleteBot(botId) using SREM + DEL",
+        "Export sendCommand(vmId, command) using LPUSH vm:{vm_id}:queue",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "Depends on US-001 (nanoid). Core module used by all API endpoints."
+    },
+    {
+      "id": "US-004",
+      "title": "Rename and refactor create bot endpoint",
+      "description": "As a developer, I want the bot creation endpoint to use per-VM queues instead of pub/sub and follow the Redis Protocol.",
+      "acceptanceCriteria": [
+        "Rename src/routes/api/vms/+server.ts to src/routes/api/bots/+server.ts",
+        "Update POST handler to use getHealthyVms() + selectBestVm() from scheduler",
+        "Return 503 if no VMs available",
+        "Generate bot ID: bot_${nanoid(10)}",
+        "Build CREATE command payload per Redis Protocol (type, bot_id, team_id, profiles, config)",
+        "Call registerBot() from bot-service to store in Redis",
+        "Call sendCommand() from bot-service to queue on VM",
+        "Keep existing channel validation schemas (Telegram/Discord/WhatsApp)",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "Depends on US-002, US-003. Existing code to keep: channel validation schemas from old api/vms."
+    },
+    {
+      "id": "US-005",
+      "title": "Add GET /api/bots endpoint",
+      "description": "As a user, I want to list all bots for my team.",
+      "acceptanceCriteria": [
+        "Add GET handler to src/routes/api/bots/+server.ts",
+        "Parse team_id query parameter",
+        "Use getTeamBots(teamId) from bot-service",
+        "Return array of bot objects with all Redis fields",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "Depends on US-003. Replaces placeholder GET in old api/vms."
+    },
+    {
+      "id": "US-006",
+      "title": "Add GET /api/bots/[id] endpoint",
+      "description": "As a user, I want to get details for a specific bot.",
+      "acceptanceCriteria": [
+        "Create src/routes/api/bots/[id]/+server.ts",
+        "Add GET handler that extracts id from params",
+        "Use getBot(botId) from bot-service",
+        "Return 404 if bot not found in Redis",
+        "Return bot object with all fields",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "Depends on US-003."
+    },
+    {
+      "id": "US-007",
+      "title": "Add POST /api/bots/[id]/stop endpoint",
+      "description": "As a user, I want to stop a running bot.",
+      "acceptanceCriteria": [
+        "Create src/routes/api/bots/[id]/stop/+server.ts",
+        "Add POST handler that extracts id from params",
+        "Get bot from Redis using getBot(), return 404 if not found",
+        "Send STOP command to VM queue using sendCommand()",
+        "Update bot status to 'stopped' using updateBotStatus()",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Depends on US-003."
+    },
+    {
+      "id": "US-008",
+      "title": "Add POST /api/bots/[id]/start endpoint",
+      "description": "As a user, I want to start a stopped bot.",
+      "acceptanceCriteria": [
+        "Create src/routes/api/bots/[id]/start/+server.ts",
+        "Add POST handler that extracts id from params",
+        "Get bot from Redis using getBot(), return 404 if not found",
+        "Send START command to VM queue using sendCommand()",
+        "Update bot status to 'running' using updateBotStatus()",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "Depends on US-003."
+    },
+    {
+      "id": "US-009",
+      "title": "Add POST /api/bots/[id]/delete endpoint",
+      "description": "As a user, I want to delete a bot permanently.",
+      "acceptanceCriteria": [
+        "Create src/routes/api/bots/[id]/delete/+server.ts",
+        "Add POST handler that extracts id from params",
+        "Get bot from Redis using getBot(), return 404 if not found",
+        "Send DELETE command to VM queue using sendCommand()",
+        "Call deleteBot() from bot-service to remove from Redis",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "Depends on US-003."
+    },
+    {
+      "id": "US-010",
+      "title": "Add POST /api/bots/[id]/credits endpoint",
+      "description": "As a user, I want to add credits to my bot for billing.",
+      "acceptanceCriteria": [
+        "Create src/routes/api/bots/[id]/credits/+server.ts",
+        "Add POST handler that extracts id from params",
+        "Validate request body: { amount: number }, amount must be positive integer",
+        "Get bot from Redis using getBot(), return 404 if not found",
+        "Send CREDIT_ADD command to VM queue using sendCommand() with amount",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "Depends on US-003."
+    },
+    {
+      "id": "US-011",
+      "title": "Update GET /api/vms endpoint",
+      "description": "As a user, I want to see VM capacity and health status.",
+      "acceptanceCriteria": [
+        "Update GET handler in src/routes/api/vms/+server.ts",
+        "Use getHealthyVms() from scheduler service",
+        "Return all VMs with parsed metrics (vm_id, status, ram_total, ram_available, ram_used, cpus, bot_count, last_heartbeat)",
+        "Include is_healthy flag based on heartbeat < 2 min",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": "Depends on US-002. Replaces placeholder GET in api/vms."
+    },
+    {
+      "id": "US-012",
+      "title": "Deprecate old VM creation endpoint",
+      "description": "As a developer, I want to keep backward compatibility while migrating to the new API.",
+      "acceptanceCriteria": [
+        "Keep POST handler in src/routes/api/vms/+server.ts for backward compatibility",
+        "Add deprecation warning log: console.warn('[DEPRECATED] POST /api/vms is deprecated, use POST /api/bots')",
+        "Add deprecation header in response: X-Deprecated: true",
+        "Forward request to new bot creation logic",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "Depends on US-004. For backward compatibility during transition."
+    }
+  ]
+}
