@@ -1,13 +1,17 @@
-# Ralph Progress Log
-Started: Mon Feb  9 01:44:50 PM CET 2026
-
 ## Codebase Patterns
-- **VM Creation API:** Uses Zod for validation with detailed per-channel schemas (telegram, discord, whatsapp)
-- **Redis Connection:** TLS-enabled connection in src/lib/server/redis.ts with rejectUnauthorized: false for self-signed certs
-- **TypeScript:** Use strict typing for channel configs
-- **API Pattern:** SvelteKit server handlers with Zod validation
-- **Redis Protocol:** Per-VM queues (vm:{vm_id}:queue) not pub/sub for commands
-- **Bot ID Format:** bot_{nanoid(10)} as per Redis Protocol
-- **Bot Registry:** Redis hash at bot:{bot_id} with fields: vm_id, team_id, profiles, status, memory, created_at
-- **Team Index:** Redis set at team:{team_id}:bots
+- Use `type RedisOptions` import from 'ioredis' instead of `Redis.RedisOptions` namespace
+- Always type callback parameters like `(times: number)` to avoid implicit any
+- Use `npm run check` for TypeScript type checking
 
+## Ralph Progress Log
+Started: Mon Feb  9 01:47:00 PM CET 2026
+
+## 2026-02-09 13:50:00 - US-001
+- Installed nanoid package for generating unique bot IDs
+- Fixed pre-existing type errors in redis.ts and api/vms/+server.ts
+- Files changed: package.json, package-lock.json, src/lib/server/redis.ts, src/routes/api/vms/+server.ts
+- **Learnings for future iterations:**
+  - ioredis types: Import `RedisOptions` type separately, don't use `Redis.RedisOptions` namespace
+  - The codebase had pre-existing type errors that needed fixing before US-001 could pass
+  - Always run `npm run check` to verify TypeScript before committing
+---
