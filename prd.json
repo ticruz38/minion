@@ -27,7 +27,7 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Existing code to reuse: src/lib/server/redis.ts for connection with TLS"
     },
     {
@@ -45,7 +45,7 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-001 (nanoid). Core module used by all API endpoints."
     },
     {

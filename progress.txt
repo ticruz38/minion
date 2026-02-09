@@ -14,4 +14,33 @@ Started: Mon Feb  9 01:47:00 PM CET 2026
   - ioredis types: Import `RedisOptions` type separately, don't use `Redis.RedisOptions` namespace
   - The codebase had pre-existing type errors that needed fixing before US-001 could pass
   - Always run `npm run check` to verify TypeScript before committing
+## 2026-02-09 13:48:14 - US-002
+- Created scheduler service module at src/lib/server/scheduler.ts
+- Implemented getHealthyVms() that queries vm:* keys and filters by status === 'healthy' and heartbeat < 2 min
+- Implemented selectBestVm(vms) that returns VM with most ram_available (min 1GB free)
+- Reused TLS connection logic from src/lib/server/redis.ts
+- Files changed: src/lib/server/scheduler.ts
+- **Learnings for future iterations:**
+  - VM data structure in Redis uses hash (HSET/HGETALL) with fields: status, ram_total, ram_available, ram_used, cpus, bot_count, last_heartbeat
+  - Use `redis.keys('vm:*')` to find all VM keys, then pipeline for efficient fetching
+  - parseFloat/parseInt needed for numeric fields since Redis stores everything as strings
+  - Reused the same TLS connection pattern from redis.ts (parsing URL, checking rediss:// protocol)
+---
+
+## 2026-02-09 13:50:00 - US-003
+- Created bot service module at src/lib/server/bot-service.ts
+- Implemented registerBot() using HSET bot:{bot_id} and SADD team:{team_id}:bots
+- Implemented getBot() using HGETALL bot:{bot_id}
+- Implemented getTeamBots() using SMEMBERS + pipelined HGETALL for efficient fetching
+- Implemented updateBotStatus() using HSET
+- Implemented deleteBot() using SREM + DEL
+- Implemented sendCommand() using LPUSH vm:{vm_id}:queue
+- Reused TLS connection logic pattern from scheduler.ts and redis.ts
+- Files changed: src/lib/server/bot-service.ts
+- **Learnings for future iterations:**
+  - Bot data structure uses Redis hash with fields: bot_id, vm_id, team_id, status, profiles (JSON), config (JSON), created_at
+  - Team-to-bots relationship uses Redis set: team:{team_id}:bots
+  - VM command queue uses Redis list: vm:{vm_id}:queue
+  - JSON fields need to be stringified before storing in Redis hash
+  - Pipelining pattern for batch fetching: create pipeline, add commands, then exec()
 ---
