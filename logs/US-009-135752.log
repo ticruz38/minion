@@ -161,109 +161,55 @@
 │ - Keep CI green                                                              │
 │ - Read the Codebase Patterns section in progress.txt before starting         │
 ╰──────────────────────────────────────────────────────────────────────────────╯
-• The user wants me to implement a user story from a PRD. Let me start by readin
-  g the PRD file and the progress log to understand what needs to be done.
-
-  Let me first check the current branch and read the required files.
-• I'll start by reading the PRD and progress files to understand what needs to b
-  e implemented.
+• Let me start by reading the PRD and progress files to understand what needs to
+  be done.
 • Used ReadFile (prd.json)
 • Used ReadFile (progress.txt)
-• Used Shell (git branch --show-current)
-• Good, I'm on the correct branch ralph/bot-orchestration-api. Looking at the PR
-  D, I can see the next story to implement is:
+• Let me analyze the current state:
 
-  US-008: Add POST /api/bots/[id]/start endpoint (priority 8, passes: false)
+  1. The PRD shows US-001 through US-008 are complete (passes: true)
+  2. The remaining stories with passes: false are:
+    • US-009: Add POST /api/bots/[id]/delete endpoint (priority 9)
+    • US-010: Add POST /api/bots/[id]/credits endpoint (priority 10)
+    • US-011: Update GET /api/vms endpoint (priority 11)
+    • US-012: Deprecate old VM creation endpoint (priority 12)
 
-  Let me review what I need to do:
+  The highest priority incomplete story is US-009: Add POST /api/bots/[id]/delet
+  e endpoint.
 
-  1. Create src/routes/api/bots/[id]/start/+server.ts
-  2. Add POST handler that extracts id from params
-  3. Get bot from Redis using getBot(), return 404 if not found
-  4. Send START command to VM queue using sendCommand()
-  5. Update bot status to 'running' using updateBotStatus()
-  6. Typecheck passes
-
-  This is very similar to US-007 (stop endpoint), just with START instead of STO
-  P and 'running' instead of 'stopped'.
-
-  Let me first look at the existing stop endpoint to use as a template.
-• I'm on the correct branch ralph/bot-orchestration-api. Looking at the PRD, I n
-  eed to implement US-008: Add POST /api/bots/[id]/start endpoint. This is the n
-  ext highest priority story with passes: false.
-
-  Let me first look at the existing stop endpoint as a reference since start wil
-  l be very similar:
-• Used ReadFile (src/routes/api/bots/[id]/stop/+server.ts)
+  Let me check the branch and start implementing US-009.
+• Let me check the current branch and then implement the highest priority incomp
+  lete story (US-009).
+• Used Shell (cd /root/code/minion && git branch --show-current)
 • Used ReadFile (src/lib/server/bot-service.ts)
-• I've analyzed the stop endpoint logic; it's a straightforward pattern of fetch
-  ing, commanding, and updating. Implementing the start endpoint should mirror t
-  his exactly, just with inverted states.
+• I'm on the correct branch (ralph/bot-orchestration-api). Now I need to impleme
+  nt US-009: Add POST /api/bots/[id]/delete endpoint.
 
-  Hmm, I need to make sure I place this in the correct directory structure. Sinc
-  e it's a bot-specific action, it belongs under [id]/start.
+  Let me look at the existing stop endpoint for reference since they have simila
+  r patterns.
+• Let me check the existing stop endpoint as a reference pattern:
+• Used ReadFile (src/routes/api/bots/[id]/stop/+server.ts)
+• Now I have a clear pattern. For the delete endpoint, I need to:
 
-  Wait, before I write the file, I should ensure the directory path exists to av
-  oid errors. Actually, I can just write the file directly—the tool will handle
-  the path creation if needed. I'll create the +server.ts file now, implementing
-  the POST handler to fetch the bot, issue the START command, and update the sta
-  tus to 'running'.
-• Now I understand the pattern. The start endpoint is very similar to stop, just
-  with START command and 'running' status. Let me create the start endpoint:
-• Used Shell (mkdir -p src/routes/api/bots/\[id\]/start)
-• Now let me create the start endpoint file.
-• Used WriteFile (src/routes/api/bots/[id]/start/+server.ts)
-• Now I need to run the typecheck to make sure everything passes.
-• Now let me run typecheck to verify the code is correct:
+  1. Create src/routes/api/bots/[id]/delete/+server.ts
+  2. Get bot using getBot(), return 404 if not found
+  3. Send DELETE command to VM queue using sendCommand()
+  4. Call deleteBot() from bot-service to remove from Redis
+
+  The delete endpoint is slightly different from stop/start:
+
+  • It needs to call deleteBot() (not just update status)
+  • The command type is 'DELETE'
+  • No status update needed since the bot is being removed entirely
+
+  Let me create this endpoint now.
+• Now I'll create the delete endpoint following the same pattern:
+• Used Shell (mkdir -p /root/code/minio...es/api/bots/\[id\]/delete)
+• Now let me create the delete endpoint file.
+• Used WriteFile (src/routes/api/bots/[id]/delete/+server.ts)
+• Now let me run the typecheck to verify the code is correct.
+• Now let me run the typecheck to verify:
 • Used Shell (cd /root/code/minion && npm run check 2>&1)
-• Typecheck passes with no errors (only warnings that were already there). Now I
-  need to:
-
-  1. Update the PRD to set passes: true for US-008
-  2. Append progress to progress.txt
-  3. Commit the changes
-
-  Let me do these steps.
-• Typecheck passes (0 errors). Now let me update the PRD and progress log, then
-  commit:
-• Used StrReplaceFile (prd.json)
-• Used StrReplaceFile (progress.txt)
-• Good, both files have been updated. Now let me commit the changes.
-• Used Shell (cd /root/code/minion && g...bots/[id]/start endpoint")
-• The commit was successful. Let me check if there are any more stories to compl
-  ete. Looking at the PRD:
-
-  • US-001: passes: true ✓
-  • US-002: passes: true ✓
-  • US-003: passes: true ✓
-  • US-004: passes: true ✓
-  • US-005: passes: true ✓
-  • US-006: passes: true ✓
-  • US-007: passes: true ✓
-  • US-008: passes: true ✓ (just completed)
-  • US-009: passes: false (next)
-  • US-010: passes: false
-  • US-011: passes: false
-  • US-012: passes: false
-
-  There are still 4 more stories to complete. So I should end my response normal
-  ly without the COMPLETE tag.
-• I've completed US-008: Add POST /api/bots/[id]/start endpoint.
-
-  Summary:
-
-  • Created src/routes/api/bots/[id]/start/+server.ts with POST handler
-  • Uses getBot() to fetch bot from Redis, returns 404 if not found
-  • Sends START command to VM queue using sendCommand()
-  • Updates bot status to 'running' using updateBotStatus()
-  • Typecheck passes (0 errors)
-
-  Files changed:
-
-  • src/routes/api/bots/[id]/start/+server.ts (new file)
-
-  Commit: feat: US-008 - Add POST /api/bots/[id]/start endpoint
-
-  ──────────────────────────────────────────────────────────────────────────────
-  There are still 4 more stories remaining (US-009 through US-012). The next sto
-  ry is US-009: Add POST /api/bots/[id]/delete endpoint.
+• Typecheck passes (0 errors, just 2 warnings that are pre-existing). Now let me
+  commit the changes.
+• Typecheck passes. Let me commit the changes:
