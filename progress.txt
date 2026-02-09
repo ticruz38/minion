@@ -1,3 +1,18 @@
+## 2026-02-09 13:57:00 - US-008
+- Created POST /api/bots/[id]/start endpoint at src/routes/api/bots/[id]/start/+server.ts
+- Implemented POST handler that extracts id from params
+- Uses getBot() from bot-service to fetch bot from Redis, returns 404 if not found
+- Sends START command to VM queue using sendCommand() with parsed profiles and config
+- Updates bot status to 'running' using updateBotStatus()
+- Follows same pattern as stop endpoint with type: 'START' and status: 'running'
+- Files changed: src/routes/api/bots/[id]/start/+server.ts
+- **Learnings for future iterations:**
+  - Start endpoint is nearly identical to stop endpoint - just different command type and status
+  - Use type: 'START' in BotCommand payload for start operations
+  - Status changes to 'running' when starting a bot (vs 'stopped' when stopping)
+  - Same error handling pattern: check bot exists, return 404 if not, proceed with command
+---
+
 ## Codebase Patterns
 - Use `type RedisOptions` import from 'ioredis' instead of `Redis.RedisOptions` namespace
 - Always type callback parameters like `(times: number)` to avoid implicit any
