@@ -50,7 +50,6 @@
     },
     {
       "id": "US-004",
-      "passes": true,
       "title": "Rename and refactor create bot endpoint",
       "description": "As a developer, I want the bot creation endpoint to use per-VM queues instead of pub/sub and follow the Redis Protocol.",
       "acceptanceCriteria": [
@@ -65,7 +64,7 @@
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-002, US-003. Existing code to keep: channel validation schemas from old api/vms."
     },
     {
