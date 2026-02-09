@@ -1,201 +1,196 @@
 {
   "project": "Minion",
-  "branchName": "ralph/multi-channel-support",
-  "description": "Multi-Channel Bot Configuration - Support for messaging platforms with OpenClaw native pairing",
+  "branchName": "ralph/bot-orchestration-api",
+  "description": "Align bot creation API with Clawd scheduler Redis protocol - implement VM selection, per-VM queues, bot lifecycle management",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Update API endpoint for multi-channel VM creation",
-      "description": "As a developer, I need to update the backend endpoint to accept the new multi-channel schema with Redis correlation ID.",
+      "title": "Add nanoid dependency",
+      "description": "As a developer, I need nanoid installed to generate unique bot IDs in format bot_{nanoid(10)}.",
       "acceptanceCriteria": [
-        "Update POST /api/vms to accept request body with `id` (UUID v4 for Redis correlation)",
-        "Replace single `token`/`passcode` with new `channels` object schema",
-        "Support telegram, discord, whatsapp channels in schema",
-        "Validate at least one channel is configured",
-        "Return HTTP 202 (Accepted) with commandId for async processing",
-        "Typecheck passes",
-        "Unit tests pass"
+        "Install nanoid package: npm install nanoid",
+        "Typecheck passes"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": "Completed 2026-02-07. Implemented detailed Zod schemas for all three channels, added UUID validation, enforced at least one channel requirement using .refine(), return HTTP 202 with commandId."
+      "passes": false,
+      "notes": "Dependency for US-002, US-003, US-004"
     },
     {
       "id": "US-002",
-      "title": "Create Redis subscription service for real-time updates",
-      "description": "As a developer, I need a Redis pub/sub service to receive VM creation events from the backend.",
+      "title": "Create scheduler service module",
+      "description": "As a developer, I need a scheduler service to query VMs from Redis and select the best one based on available RAM.",
       "acceptanceCriteria": [
-        "Create src/lib/server/redis.ts with VMStatusSubscriber class",
-        "Subscribe to 'clawd:responses' channel",
-        "Support subscribe/unsubscribe by commandId with callback handler",
-        "Auto-unsubscribe after 10 minutes to prevent memory leaks",
-        "Handle ACKNOWLEDGED, SUCCESS, and ERROR events",
-        "Typecheck passes",
-        "Test with mocked Redis events"
+        "Create src/lib/server/scheduler.ts",
+        "Export getHealthyVms() that queries vm:* keys and filters by status === 'healthy' and heartbeat < 2 min",
+        "Export selectBestVm(vms) that returns VM with most ram_available (min 1GB free)",
+        "Reuse TLS connection logic from src/lib/server/redis.ts",
+        "Typecheck passes"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "Completed 2026-02-07. Implemented VMStatusSubscriber with full test coverage, singleton pattern, auto-cleanup on terminal states (SUCCESS/ERROR), 10-minute auto-unsubscribe timeout, and comprehensive TypeScript types."
+      "passes": false,
+      "notes": "Existing code to reuse: src/lib/server/redis.ts for connection with TLS"
     },
     {
       "id": "US-003",
-      "title": "Build Channel Selection Step component",
-      "description": "As a user, I want to select which messaging platforms my bot will use from a visual grid.",
+      "title": "Create bot service module",
+      "description": "As a developer, I need a bot service to handle all Redis operations for bot lifecycle management.",
       "acceptanceCriteria": [
-        "Create ChannelSelectionStep.svelte component",
-        "Display grid of channel cards: Telegram, Discord, WhatsApp (P0)",
-        "Each card shows icon, name, and checkbox for selection",
-        "Multiple channels can be selected",
-        "Show 'Selected: X channels' summary",
-        "Validate at least one channel selected before proceeding",
-        "Responsive grid: 3 columns desktop, 2 tablet, 1 mobile",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Create src/lib/server/bot-service.ts",
+        "Export registerBot(botId, vmId, teamId, profiles, config) using HSET bot:{bot_id} and SADD team:{team_id}:bots",
+        "Export getBot(botId) using HGETALL bot:{bot_id}",
+        "Export getTeamBots(teamId) using SMEMBERS + pipelined HGETALL",
+        "Export updateBotStatus(botId, status) using HSET",
+        "Export deleteBot(botId) using SREM + DEL",
+        "Export sendCommand(vmId, command) using LPUSH vm:{vm_id}:queue",
+        "Typecheck passes"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "Completed 2026-02-07. Created ChannelSelectionStep.svelte with visual grid, checkbox selection, validation, and responsive design. Tested in browser across desktop, tablet, and mobile viewports."
+      "passes": false,
+      "notes": "Depends on US-001 (nanoid). Core module used by all API endpoints."
     },
     {
       "id": "US-004",
-      "title": "Build Telegram channel configuration form",
-      "description": "As a user, I want to configure my Telegram bot with token and security policy.",
+      "title": "Rename and refactor create bot endpoint",
+      "description": "As a developer, I want the bot creation endpoint to use per-VM queues instead of pub/sub and follow the Redis Protocol.",
       "acceptanceCriteria": [
-        "Create TelegramConfigForm.svelte component",
-        "Bot Token input with password masking and show/hide toggle",
-        "Help text with link to @BotFather instructions",
-        "dmPolicy radio buttons: Pairing, Allowlist, Open",
-        "Optional allowUsers textarea for usernames",
-        "Real-time validation for token format",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Rename src/routes/api/vms/+server.ts to src/routes/api/bots/+server.ts",
+        "Update POST handler to use getHealthyVms() + selectBestVm() from scheduler",
+        "Return 503 if no VMs available",
+        "Generate bot ID: bot_${nanoid(10)}",
+        "Build CREATE command payload per Redis Protocol (type, bot_id, team_id, profiles, config)",
+        "Call registerBot() from bot-service to store in Redis",
+        "Call sendCommand() from bot-service to queue on VM",
+        "Keep existing channel validation schemas (Telegram/Discord/WhatsApp)",
+        "Typecheck passes"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "Completed 2026-02-07. TelegramConfigForm.svelte already existed with all required features: bot token input with password masking and visibility toggle, @BotFather help link with /newbot command, dmPolicy radio buttons (pairing/allowlist/open), allowedUsers textarea with username parsing, real-time token format validation using regex /^\d+:[a-zA-Z0-9_-]+$/."
+      "passes": false,
+      "notes": "Depends on US-002, US-003. Existing code to keep: channel validation schemas from old api/vms."
     },
     {
       "id": "US-005",
-      "title": "Build Discord channel configuration form",
-      "description": "As a user, I want to configure my Discord bot with token and required intents.",
+      "title": "Add GET /api/bots endpoint",
+      "description": "As a user, I want to list all bots for my team.",
       "acceptanceCriteria": [
-        "Create DiscordConfigForm.svelte component",
-        "Bot Token input with password masking and show/hide toggle",
-        "Warning about required intents: Message Content, Server Members",
-        "Help link to Discord Developer Portal",
-        "dmPolicy radio buttons: Pairing, Allowlist, Open",
-        "Real-time validation for token format",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Add GET handler to src/routes/api/bots/+server.ts",
+        "Parse team_id query parameter",
+        "Use getTeamBots(teamId) from bot-service",
+        "Return array of bot objects with all Redis fields",
+        "Typecheck passes"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "Completed 2026-02-07. Created DiscordConfigForm.svelte with Discord branding (#5865F2), bot token input with masking/toggle, required intents warning box (Message Content Intent, Server Members Intent), link to Discord Developer Portal, dmPolicy selection with allowlist user chips, and real-time token validation."
+      "passes": false,
+      "notes": "Depends on US-003. Replaces placeholder GET in old api/vms."
     },
     {
       "id": "US-006",
-      "title": "Build WhatsApp channel configuration form",
-      "description": "As a user, I want to configure WhatsApp with phone number and API credentials.",
+      "title": "Add GET /api/bots/[id] endpoint",
+      "description": "As a user, I want to get details for a specific bot.",
       "acceptanceCriteria": [
-        "Create WhatsAppConfigForm.svelte component",
-        "Phone Number input with E.164 format validation",
-        "API Key input with password masking",
-        "Optional Webhook URL input",
-        "Help text with setup instructions",
-        "Real-time validation for phone format",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Create src/routes/api/bots/[id]/+server.ts",
+        "Add GET handler that extracts id from params",
+        "Use getBot(botId) from bot-service",
+        "Return 404 if bot not found in Redis",
+        "Return bot object with all fields",
+        "Typecheck passes"
       ],
       "priority": 6,
-      "passes": true,
-      "notes": "Completed 2026-02-07. Created WhatsAppConfigForm.svelte with E.164 phone validation (+ followed by 10-15 digits), API key input with password masking and toggle, optional webhook URL input, WhatsApp Business Platform help link, dmPolicy radio buttons (pairing/allowlist/open), and allowlist phone number chips. Uses WhatsApp green (#25d366) branding."
+      "passes": false,
+      "notes": "Depends on US-003."
     },
     {
       "id": "US-007",
-      "title": "Build Security Configuration Step",
-      "description": "As a user, I want to review my security settings before launching the bot.",
+      "title": "Add POST /api/bots/[id]/stop endpoint",
+      "description": "As a user, I want to stop a running bot.",
       "acceptanceCriteria": [
-        "Create SecurityConfigStep.svelte component",
-        "Display list of selected channels with their dmPolicy setting",
-        "Explain 'Pairing' mode with visual info box",
-        "Explain 'Allowlist' and 'Open' modes briefly",
-        "Next button proceeds to Review step",
-        "Back button returns to Channel Configuration",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Create src/routes/api/bots/[id]/stop/+server.ts",
+        "Add POST handler that extracts id from params",
+        "Get bot from Redis using getBot(), return 404 if not found",
+        "Send STOP command to VM queue using sendCommand()",
+        "Update bot status to 'stopped' using updateBotStatus()",
+        "Typecheck passes"
       ],
       "priority": 7,
-      "passes": true,
-      "notes": "Completed 2026-02-07. Created SecurityConfigStep.svelte with selected channels summary, visual policy badges with channel colors, dynamic security mode explanations (Pairing, Allowlist, Open), security tips section. Exported types: DMPolicy, ChannelType, ChannelSecurityConfig, SecuritySummary. Browser tested with single channel, multi-channel, and mobile viewports."
+      "passes": false,
+      "notes": "Depends on US-003."
     },
     {
       "id": "US-008",
-      "title": "Update Review and Launch Step for multi-channel",
-      "description": "As a user, I want to review all my channel configurations before launching.",
+      "title": "Add POST /api/bots/[id]/start endpoint",
+      "description": "As a user, I want to start a stopped bot.",
       "acceptanceCriteria": [
-        "Update ReviewStep.svelte to show all selected channels",
-        "Summary cards per channel: icon, name, dmPolicy, masked credentials",
-        "Credit cost breakdown with warning for low balance",
-        "Launch Bot button with loading state",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Create src/routes/api/bots/[id]/start/+server.ts",
+        "Add POST handler that extracts id from params",
+        "Get bot from Redis using getBot(), return 404 if not found",
+        "Send START command to VM queue using sendCommand()",
+        "Update bot status to 'running' using updateBotStatus()",
+        "Typecheck passes"
       ],
       "priority": 8,
-      "passes": true,
-      "notes": "Completed 2026-02-07. Created ReviewStep.svelte component with multi-channel support. Shows all selected channels with summary cards (icon, name, dmPolicy badge, masked credentials), allowlist user counts. Credit cost breakdown with low balance warning (< 2 hours runtime). Launch Bot button with loading state and minion color theming. All TypeScript types exported from module context."
+      "passes": false,
+      "notes": "Depends on US-003."
     },
     {
       "id": "US-009",
-      "title": "Create real-time progress modal",
-      "description": "As a user, I want to see real-time progress while my bot is being created.",
+      "title": "Add POST /api/bots/[id]/delete endpoint",
+      "description": "As a user, I want to delete a bot permanently.",
       "acceptanceCriteria": [
-        "Create VMProgressModal.svelte component",
-        "Show after request is acknowledged via Redis",
-        "Animated progress indicator with current step text",
-        "Handle SUCCESS: show connection info and close",
-        "Handle ERROR: show error details and retry option",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Create src/routes/api/bots/[id]/delete/+server.ts",
+        "Add POST handler that extracts id from params",
+        "Get bot from Redis using getBot(), return 404 if not found",
+        "Send DELETE command to VM queue using sendCommand()",
+        "Call deleteBot() from bot-service to remove from Redis",
+        "Typecheck passes"
       ],
       "priority": 9,
-      "passes": true,
-      "notes": "Completed 2026-02-07. Created VMProgressModal.svelte with animated progress bar, status step indicators (Request sent → Acknowledged → Creating → Ready), success state with connection details (Telegram/Discord/WhatsApp bot usernames, VM ID with copy buttons), error state with error code and retry option. Component exports types VMProgressStatus, VMConnectionInfo, VMProgressData for external use. Browser verified with success, error, and progress scenarios."
+      "passes": false,
+      "notes": "Depends on US-003."
     },
     {
       "id": "US-010",
-      "title": "Integrate multi-channel modal with CharacterSelector",
-      "description": "As a user, I want the new multi-step flow when clicking HIRE on a Minion.",
+      "title": "Add POST /api/bots/[id]/credits endpoint",
+      "description": "As a user, I want to add credits to my bot for billing.",
       "acceptanceCriteria": [
-        "Update modal integration to use new flow: Name → Channels → Security → Review",
-        "Generate UUID v4 for commandId on modal open",
-        "Subscribe to Redis events before sending POST request",
-        "Show VMProgressModal after launch",
-        "Show success toast on completion",
-        "Reset form state on modal close/reopen",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill - E2E flow"
+        "Create src/routes/api/bots/[id]/credits/+server.ts",
+        "Add POST handler that extracts id from params",
+        "Validate request body: { amount: number }, amount must be positive integer",
+        "Get bot from Redis using getBot(), return 404 if not found",
+        "Send CREDIT_ADD command to VM queue using sendCommand() with amount",
+        "Typecheck passes"
       ],
       "priority": 10,
-      "passes": true,
-      "notes": "Completed 2026-02-07. Integrated multi-channel flow with CharacterSelector: 5-step modal flow (Name → Channels → Configure → Security → Review), UUID v4 generation for Redis correlation, VMProgressModal for real-time updates, form reset on close, success toast notification. Fixed reactivity bug in config forms where valid event wasn't dispatched synchronously."
+      "passes": false,
+      "notes": "Depends on US-003."
     },
     {
       "id": "US-011",
-      "title": "Update Playwright tests for multi-channel",
-      "description": "As a developer, I need updated tests for the new multi-channel flow.",
+      "title": "Update GET /api/vms endpoint",
+      "description": "As a user, I want to see VM capacity and health status.",
       "acceptanceCriteria": [
-        "Update tests/vm-creation-modal.spec.ts for new flow",
-        "Test: Channel selection (single and multiple)",
-        "Test: Each P0 channel form validation",
-        "Test: dmPolicy selection persistence",
-        "Test: Full happy path with mocked API",
-        "Test: Error handling on API failure",
-        "Typecheck passes",
-        "All Playwright tests pass"
+        "Update GET handler in src/routes/api/vms/+server.ts",
+        "Use getHealthyVms() from scheduler service",
+        "Return all VMs with parsed metrics (vm_id, status, ram_total, ram_available, ram_used, cpus, bot_count, last_heartbeat)",
+        "Include is_healthy flag based on heartbeat < 2 min",
+        "Typecheck passes"
       ],
       "priority": 11,
-      "passes": true,
-      "notes": "Completed 2026-02-07. Updated tests/vm-creation-modal.spec.ts with comprehensive 56 tests covering the new 5-step multi-channel flow. Tests include: Step 1 (Name), Step 2 (Channel Selection), Step 3 (Telegram/Discord/WhatsApp Configuration), Step 4 (Security Review), Step 5 (Review and Launch). All acceptance criteria met: channel selection tests, form validation for all P0 channels, dmPolicy selection/persistence, full happy path tests, error handling tests. TypeScript type checking passes. Key tests verified passing."
+      "passes": false,
+      "notes": "Depends on US-002. Replaces placeholder GET in api/vms."
+    },
+    {
+      "id": "US-012",
+      "title": "Deprecate old VM creation endpoint",
+      "description": "As a developer, I want to keep backward compatibility while migrating to the new API.",
+      "acceptanceCriteria": [
+        "Keep POST handler in src/routes/api/vms/+server.ts for backward compatibility",
+        "Add deprecation warning log: console.warn('[DEPRECATED] POST /api/vms is deprecated, use POST /api/bots')",
+        "Add deprecation header in response: X-Deprecated: true",
+        "Forward request to new bot creation logic",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "Depends on US-004. For backward compatibility during transition."
     }
   ]
 }

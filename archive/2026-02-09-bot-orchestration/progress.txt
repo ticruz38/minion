@@ -1,0 +1,422 @@
+# Ralph Progress Log
+Started: Sat Feb  7 11:35:15 AM CET 2026
+
+## Codebase Patterns
+- **VM Creation API:** Uses Zod for validation with detailed per-channel schemas (telegram, discord, whatsapp)
+- **UUID Correlation:** Frontend generates UUID v4 for `id` field; backend uses this for Redis correlation
+- **HTTP Status Codes:** API returns 202 (Accepted) for async processing, not 201 (Created)
+- **Redis Channels:** `clawd:commands` for publishing requests, `clawd:responses` for status updates
+- **TypeScript:** Use strict typing for channel configs with discriminated unions (`enabled: true`)
+- **Test Pattern:** Mock `/api/vms` route to verify request schema and response handling
+- **Redis Pub/Sub:** Use separate Redis connections for subscriber (receives messages) and publisher (sends messages)
+- **Memory Leak Prevention:** Always set auto-unsubscribe timeouts for Redis subscriptions; clear timeouts on manual unsubscribe
+- **Vitest Pattern:** Use vi.mock() at top-level to mock dependencies like ioredis; extract mock instances via vi.mocked()
+- **Svelte Type Exports:** Export types/interfaces from `<script context="module">` block, not regular `<script>`
+- **Component Data Attributes:** Add `data-testid` attributes for reliable Playwright/Cypress selectors
+- **Form Component Pattern:** Use `bind:config` for two-way data binding with event dispatchers (`change`, `valid` events)
+- **Input Validation:** Real-time validation with regex patterns and visual feedback (green/red borders)
+- **Token Masking:** Use `<input type="password">` with toggle button to switch to `type="text"`
+- **Progress Modal Pattern:** Export `updateStatus()` method on component for parent to call with Redis events; dispatch `success`/`error`/`close` events for parent handling
+
+---
+
+## 2026-02-07 11:38:00 - US-001
+- Updated POST /api/vms endpoint to accept new multi-channel schema with Redis correlation ID
+- Made `id` field required as UUID v4 for correlation with Redis responses
+- Added detailed channel validation schemas for Telegram, Discord, and WhatsApp
+- Implemented validation: at least one channel must be configured
+- Changed response status from 200 to HTTP 202 (Accepted) for async processing
+- Updated Playwright tests to validate new multi-channel schema
+- Files changed:
+  - `src/routes/api/vms/+server.ts` - Complete rewrite with multi-channel support
+  - `tests/vm-creation-modal.spec.ts` - Updated tests for new schema
+  - `AGENTS.md` - Added VM Creation API documentation section
+- **Learnings for future iterations:**
+  - Zod's `.refine()` is useful for cross-field validation (e.g., at least one channel enabled)
+  - Use `z.literal(true)` for discriminated union patterns in channel configs
+  - When testing APIs, verify both request schema (what frontend sends) and response handling
+  - UUID validation regex: `/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i`
+  - Keep legacy token support for backward compatibility during transition
+---
+
+## 2026-02-07 11:42:00 - US-002
+- Created VMStatusSubscriber class in `src/lib/server/redis.ts` for Redis pub/sub
+- Subscribes to `clawd:responses` channel for real-time VM creation status updates
+- Supports subscribe/unsubscribe by commandId with callback handler
+- Implemented 10-minute auto-unsubscribe timeout to prevent memory leaks
+- Auto-unsubscribes on terminal states (SUCCESS, ERROR) for immediate cleanup
+- Handles ACKNOWLEDGED, SUCCESS, and ERROR events with full TypeScript types
+- Added singleton pattern via `getSharedVMStatusSubscriber()` for server-wide use
+- Created comprehensive unit tests with mocked Redis (22 tests, all passing)
+- Added vitest for unit testing alongside Playwright for E2E tests
+- Files changed:
+  - `src/lib/server/redis.ts` - New Redis subscription service
+  - `tests/redis-subscriber.spec.ts` - Unit tests for Redis subscriber
+  - `vitest.config.ts` - Vitest configuration for unit tests
+  - `package.json` - Added vitest dependency and test scripts
+  - `AGENTS.md` - Added Redis Pub/Sub Service documentation
+- **Learnings for future iterations:**
+  - Redis pub/sub requires separate connections for subscriber and publisher
+  - Always implement cleanup (clearTimeout, disconnect) in disconnect() methods
+  - Use vi.fn() and vi.mocked() to extract and verify mock function calls in vitest
+  - For Redis message handling tests, extract the message handler from mock calls
+  - Auto-cleanup patterns: timeout-based + terminal-state-based for reliability
+  - TypeScript discriminated unions work well for event status types
+  - Export types from server modules for use in frontend components
+---
+
+## 2026-02-07 11:47:00 - US-003
+- Created ChannelSelectionStep.svelte component for multi-channel selection
+- Implemented visual grid of channel cards (Telegram, Discord, WhatsApp) with icons and descriptions
+- Added checkbox selection with visual feedback (selected/unselected states with colors)
+- Implemented "Selected: X channels" summary with channel chips
+- Added validation message when no channels are selected
+- Responsive design: 3 columns desktop, 2 columns tablet, 1 column mobile
+- Full keyboard accessibility (Enter/Space to select, proper ARIA attributes)
+- Exported TypeScript types from `<script context="module">` for external use
+- Browser tested across desktop (1280px), tablet (768px), and mobile (375px) viewports
+- Files changed:
+  - `src/lib/components/ChannelSelectionStep.svelte` - New channel selection component
+  - `src/routes/test-channel-selection/+page.svelte` - Temporary test page (for verification)
+- **Learnings for future iterations:**
+  - In Svelte, export types/interfaces from `<script context="module">` block, not regular `<script>`
+  - Use CSS custom properties (variables) for dynamic channel colors: `--channel-color: #xxx`
+  - Add `data-testid` attributes for reliable Playwright selectors
+  - Grid layout with media queries: `grid-template-columns: repeat(3, 1fr)` → 2 → 1
+  - Visual feedback on selection: border-color change + box-shadow glow effect
+  - Use `aria-checked` and `role="checkbox"` for accessible card components
+  - Svelte transitions: `{@html}` directive for rendering SVG icons from strings
+---
+
+## 2026-02-07 11:58:00 - US-004
+- Verified TelegramConfigForm.svelte component already exists with all required features
+- Bot token input with password masking (type="password") and show/hide toggle button
+- Help text with link to @BotFather instructions and `/newbot` command code block
+- dmPolicy radio buttons: Pairing (default), Allowlist, Open - with visual selection states
+- Optional allowUsers textarea that appears only when Allowlist is selected
+- Real-time validation for token format using regex `/^\d+:[a-zA-Z0-9_-]+$/`
+- Dynamic UI: pairing info box, allowlist textarea with username chips, open access warning
+- Exported types: `DMPolicy` and `TelegramConfig` from module context
+- Created test page at `/test-telegram-form` for browser verification
+- Verified in browser: token masking toggle, validation, dmPolicy switching, username parsing
+- All quality checks pass: TypeScript (0 errors), Vitest (22/22 tests passing)
+- Files changed:
+  - `src/routes/test-telegram-form/+page.svelte` - New test page for verification
+- **Learnings for future iterations:**
+  - Form components should dispatch both `change` (data) and `valid` (boolean) events
+  - Use reactive statements (`$:`) to compute derived state like `isValid`
+  - Parse textarea input with split/map/filter to extract array values
+  - Show conditional UI sections based on selected policy type
+  - Token format for Telegram bots: `digits:alphanumeric` (e.g., `123456:ABC-DEF123`)
+  - Use `isTesting` prop to disable animations during E2E tests for reliability
+  - Pattern for conditional visibility: `{#if config.dmPolicy === 'allowlist'}` with `transition:fade`
+---
+# Ralph Progress Log
+Started: Sat Feb  7 11:35:15 AM CET 2026
+
+## Codebase Patterns
+- **VM Creation API:** Uses Zod for validation with detailed per-channel schemas (telegram, discord, whatsapp)
+- **UUID Correlation:** Frontend generates UUID v4 for `id` field; backend uses this for Redis correlation
+- **HTTP Status Codes:** API returns 202 (Accepted) for async processing, not 201 (Created)
+- **Redis Channels:** `clawd:commands` for publishing requests, `clawd:responses` for status updates
+- **TypeScript:** Use strict typing for channel configs with discriminated unions (`enabled: true`)
+- **Test Pattern:** Mock `/api/vms` route to verify request schema and response handling
+- **Redis Pub/Sub:** Use separate Redis connections for subscriber (receives messages) and publisher (sends messages)
+- **Memory Leak Prevention:** Always set auto-unsubscribe timeouts for Redis subscriptions; clear timeouts on manual unsubscribe
+- **Vitest Pattern:** Use vi.mock() at top-level to mock dependencies like ioredis; extract mock instances via vi.mocked()
+- **Svelte Type Exports:** Export types/interfaces from `<script context="module">` block, not regular `<script>`
+- **Component Data Attributes:** Add `data-testid` attributes for reliable Playwright/Cypress selectors
+- **Form Component Pattern:** Use `bind:config` for two-way data binding with event dispatchers (`change`, `valid` events)
+- **Input Validation:** Real-time validation with regex patterns and visual feedback (green/red borders)
+- **Token Masking:** Use `<input type="password">` with toggle button to switch to `type="text"`
+
+---
+
+## 2026-02-07 11:38:00 - US-001
+- Updated POST /api/vms endpoint to accept new multi-channel schema with Redis correlation ID
+- Made `id` field required as UUID v4 for correlation with Redis responses
+- Added detailed channel validation schemas for Telegram, Discord, and WhatsApp
+- Implemented validation: at least one channel must be configured
+- Changed response status from 200 to HTTP 202 (Accepted) for async processing
+- Updated Playwright tests to validate new multi-channel schema
+- Files changed:
+  - `src/routes/api/vms/+server.ts` - Complete rewrite with multi-channel support
+  - `tests/vm-creation-modal.spec.ts` - Updated tests for new schema
+  - `AGENTS.md` - Added VM Creation API documentation section
+- **Learnings for future iterations:**
+  - Zod's `.refine()` is useful for cross-field validation (e.g., at least one channel enabled)
+  - Use `z.literal(true)` for discriminated union patterns in channel configs
+  - When testing APIs, verify both request schema (what frontend sends) and response handling
+  - UUID validation regex: `/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i`
+  - Keep legacy token support for backward compatibility during transition
+---
+
+## 2026-02-07 11:42:00 - US-002
+- Created VMStatusSubscriber class in `src/lib/server/redis.ts` for Redis pub/sub
+- Subscribes to `clawd:responses` channel for real-time VM creation status updates
+- Supports subscribe/unsubscribe by commandId with callback handler
+- Implemented 10-minute auto-unsubscribe timeout to prevent memory leaks
+- Auto-unsubscribes on terminal states (SUCCESS, ERROR) for immediate cleanup
+- Handles ACKNOWLEDGED, SUCCESS, and ERROR events with full TypeScript types
+- Added singleton pattern via `getSharedVMStatusSubscriber()` for server-wide use
+- Created comprehensive unit tests with mocked Redis (22 tests, all passing)
+- Added vitest for unit testing alongside Playwright for E2E tests
+- Files changed:
+  - `src/lib/server/redis.ts` - New Redis subscription service
+  - `tests/redis-subscriber.spec.ts` - Unit tests for Redis subscriber
+  - `vitest.config.ts` - Vitest configuration for unit tests
+  - `package.json` - Added vitest dependency and test scripts
+  - `AGENTS.md` - Added Redis Pub/Sub Service documentation
+- **Learnings for future iterations:**
+  - Redis pub/sub requires separate connections for subscriber and publisher
+  - Always implement cleanup (clearTimeout, disconnect) in disconnect() methods
+  - Use vi.fn() and vi.mocked() to extract and verify mock function calls in vitest
+  - For Redis message handling tests, extract the message handler from mock calls
+  - Auto-cleanup patterns: timeout-based + terminal-state-based for reliability
+  - TypeScript discriminated unions work well for event status types
+  - Export types from server modules for use in frontend components
+---
+
+## 2026-02-07 11:47:00 - US-003
+- Created ChannelSelectionStep.svelte component for multi-channel selection
+- Implemented visual grid of channel cards (Telegram, Discord, WhatsApp) with icons and descriptions
+- Added checkbox selection with visual feedback (selected/unselected states with colors)
+- Implemented "Selected: X channels" summary with channel chips
+- Added validation message when no channels are selected
+- Responsive design: 3 columns desktop, 2 columns tablet, 1 column mobile
+- Full keyboard accessibility (Enter/Space to select, proper ARIA attributes)
+- Exported TypeScript types from `<script context="module">` for external use
+- Browser tested across desktop (1280px), tablet (768px), and mobile (375px) viewports
+- Files changed:
+  - `src/lib/components/ChannelSelectionStep.svelte` - New channel selection component
+  - `src/routes/test-channel-selection/+page.svelte` - Temporary test page (for verification)
+- **Learnings for future iterations:**
+  - In Svelte, export types/interfaces from `<script context="module">` block, not regular `<script>`
+  - Use CSS custom properties (variables) for dynamic channel colors: `--channel-color: #xxx`
+  - Add `data-testid` attributes for reliable Playwright selectors
+  - Grid layout with media queries: `grid-template-columns: repeat(3, 1fr)` → 2 → 1
+  - Visual feedback on selection: border-color change + box-shadow glow effect
+  - Use `aria-checked` and `role="checkbox"` for accessible card components
+  - Svelte transitions: `{@html}` directive for rendering SVG icons from strings
+---
+
+## 2026-02-07 11:58:00 - US-004
+- Verified TelegramConfigForm.svelte component already exists with all required features
+- Bot token input with password masking (type="password") and show/hide toggle button
+- Help text with link to @BotFather instructions and `/newbot` command code block
+- dmPolicy radio buttons: Pairing (default), Allowlist, Open - with visual selection states
+- Optional allowUsers textarea that appears only when Allowlist is selected
+- Real-time validation for token format using regex `/^\d+:[a-zA-Z0-9_-]+$/`
+- Dynamic UI: pairing info box, allowlist textarea with username chips, open access warning
+- Exported types: `DMPolicy` and `TelegramConfig` from module context
+- Created test page at `/test-telegram-form` for browser verification
+- Verified in browser: token masking toggle, validation, dmPolicy switching, username parsing
+- All quality checks pass: TypeScript (0 errors), Vitest (22/22 tests passing)
+- Files changed:
+  - `src/routes/test-telegram-form/+page.svelte` - New test page for verification
+- **Learnings for future iterations:**
+  - Form components should dispatch both `change` (data) and `valid` (boolean) events
+  - Use reactive statements (`$:`) to compute derived state like `isValid`
+  - Parse textarea input with split/map/filter to extract array values
+  - Show conditional UI sections based on selected policy type
+  - Token format for Telegram bots: `digits:alphanumeric` (e.g., `123456:ABC-DEF123`)
+  - Use `isTesting` prop to disable animations during E2E tests for reliability
+  - Pattern for conditional visibility: `{#if config.dmPolicy === 'allowlist'}` with `transition:fade`
+---
+
+## 2026-02-07 12:10:00 - US-005
+- Created DiscordConfigForm.svelte component following TelegramConfigForm pattern
+- Bot Token input with password masking and show/hide toggle button
+- Discord branding color (#5865F2) used throughout component
+- Help box with link to Discord Developer Portal for creating bot applications
+- Required Bot Intents warning box listing Message Content Intent and Server Members Intent
+- dmPolicy radio buttons: Pairing, Allowlist, Open with visual selection states
+- Allowlist textarea for entering Discord usernames/IDs with user chip rendering
+- Real-time token validation using regex `/^[a-zA-Z0-9_.-]+$/`
+- Dynamic UI sections: Pairing info box, Allowlist textarea, Open access warning
+- Exported types: `DMPolicy` and `DiscordConfig` from module context
+- Added `isTesting` prop to disable animations during E2E tests
+- Browser verified using Playwright skill: all functionality works correctly
+- All quality checks pass: TypeScript (0 errors), Vitest (22/22 tests passing)
+- Files changed:
+  - `src/lib/components/DiscordConfigForm.svelte` - New Discord config form component
+- **Learnings for future iterations:**
+  - Reuse component patterns from similar forms but adapt branding colors
+  - Discord tokens have different format than Telegram (alphanumeric with dots/underscores)
+  - Required intents warning is Discord-specific and should be prominent
+  - Use `.intents-box` CSS class with yellow/amber colors for warnings
+  - Consistent event dispatching pattern: `change` for data, `valid` for boolean
+  - Same two-way binding pattern with `bind:config` for parent-child communication
+---
+---
+
+## 2026-02-07 12:13:00 - US-006
+- Created WhatsAppConfigForm.svelte component for WhatsApp Business API configuration
+- Phone Number input with E.164 format validation (regex: /^\+[1-9]\d{9,14}$/)
+- API Key input with password masking and show/hide toggle button
+- Optional Webhook URL input for receiving message events
+- Help box with link to WhatsApp Business Platform signup
+- dmPolicy radio buttons: Pairing, Allowlist, Open with visual selection states
+- Allowlist textarea for phone numbers with E.164 format chips
+- Real-time validation for phone and API key with visual feedback (green/red borders)
+- WhatsApp branding color (#25d366) used throughout component
+- Exported types: `DMPolicy` and `WhatsAppConfig` from module context
+- Added `isTesting` prop to disable animations during E2E tests
+- Browser verified using Playwright skill: all functionality works correctly
+- All quality checks pass: TypeScript (0 errors), Vitest (22/22 tests passing)
+- Files changed:
+  - `src/lib/components/WhatsAppConfigForm.svelte` - New WhatsApp config form component
+- **Learnings for future iterations:**
+  - WhatsApp uses different credentials than Telegram/Discord: phone number + API key instead of bot token
+  - E.164 phone format validation: starts with + followed by country code and 10-15 digits
+  - Phone number chips in allowlist mode need different formatting than username chips (keep the +)
+  - Webhook URL is optional - provide clear help text explaining auto-polling fallback
+  - Consistent pattern with other channel forms: same event dispatching, validation approach, styling
+---
+
+## 2026-02-07 12:26:00 - US-007
+- Created SecurityConfigStep.svelte component for reviewing security settings before launch
+- Implemented selected channels summary with visual channel cards showing icon, name, and policy badge
+- Policy badges display: 🔒 Pairing Mode (green), 📋 Allowlist (blue), 🌐 Open Access (orange)
+- Dynamic security mode explanations - only shows info boxes for modes currently in use
+- Special visual info box for Pairing Mode explaining it's the recommended security setting
+- Warning box for Open Access mode when used
+- Allowlist user count displayed (e.g., "3 users") on channel cards
+- Security Tips section with best practices
+- Exported TypeScript types: DMPolicy, ChannelType, ChannelSecurityConfig, SecuritySummary
+- Responsive design tested on desktop (1280px) and mobile (375px)
+- Browser verified using Playwright skill with all policy combinations
+- All quality checks pass: TypeScript (0 errors), Vitest (22/22 tests passing)
+- Files changed:
+  - `src/lib/components/SecurityConfigStep.svelte` - New security configuration step component
+- **Learnings for future iterations:**
+  - Component pattern for review/summary steps: show compact summary cards + detailed explanations
+  - Use conditional rendering to only show relevant info (e.g., don't show Open Access warning if not used)
+  - Color-coded policy badges help users quickly identify security levels
+  - Channel metadata (name, color, icon) can be centralized and reused across components
+  - Allowlist count chips provide useful at-a-glance information without cluttering the UI
+  - Security tips section adds value and reinforces best practices
+---
+
+## 2026-02-07 12:34:00 - US-008
+- Created ReviewStep.svelte component for the final review and launch step
+- Implemented multi-channel summary cards with:
+  - Channel icons with brand colors (Telegram blue, Discord purple, WhatsApp green)
+  - Security policy badges with icons (🔒 Pairing, 📋 Allowlist, 🌐 Open)
+  - Masked credentials display (••••••••last4 format)
+  - Allowlist user count chips when applicable
+- Added credit cost breakdown section:
+  - Hourly rate display (95 credits/hour)
+  - User balance with monospace font
+  - Estimated runtime calculation
+  - Low balance warning banner (< 2 hours runtime)
+- Implemented Launch Bot button with:
+  - Minion color theming (dynamic gradient border)
+  - Loading spinner animation during launch
+  - Disabled state while launching
+- Full TypeScript type exports from module context for integration
+- Responsive design tested on desktop (1280px) and mobile (375px) viewports
+- Files changed:
+  - `src/lib/components/ReviewStep.svelte` - New review step component
+- **Learnings for future iterations:**
+  - Credential masking patterns: show last 4 for tokens, keep country code for phones
+  - Consistent card design with left border accent color matching channel brand
+  - Use CSS custom properties (--channel-color) for dynamic theming per channel
+  - Monospace fonts work well for credentials and numerical values
+  - Loading states should disable the button and show spinner + text change
+  - Error banners should use consistent red styling from existing components
+---
+
+## 2026-02-07 12:44:00 - US-009
+- Created VMProgressModal.svelte component for real-time progress during bot creation
+- Implemented animated progress bar with percentage display and step labels
+- Status step indicators showing Request sent → Acknowledged → Creating → Ready pipeline
+- Progress states: idle, acknowledged, creating, success, error with visual transitions
+- Success state displays:
+  - Green checkmark icon and "Bot Created!" title
+  - Connection details section with Telegram/Discord/WhatsApp bot info
+  - VM ID with copy-to-clipboard buttons
+  - Auto-close after 2.5 seconds with success event dispatch
+- Error state displays:
+  - Red X icon and "Creation Failed" title
+  - Error message and error code
+  - Suggestions section with troubleshooting tips
+  - Cancel and Try Again buttons (retry dispatches event for parent handling)
+- Exports TypeScript types: VMProgressStatus, VMConnectionInfo, VMProgressData
+- Component exposes `updateStatus()` method for parent to call with Redis events
+- Dispatches events: `close`, `retry`, `success` for parent handling
+- Browser verified with Playwright across success, error, and progress scenarios
+- TypeScript checks pass (0 errors)
+- Files changed:
+  - `src/lib/components/VMProgressModal.svelte` - New VM progress modal component
+- **Learnings for future iterations:**
+  - Use `{#if true}` block with `@const` to create local variable aliases for complex reactive expressions
+  - Export `updateStatus()` method on component instance for imperative updates from parent
+  - Component pattern: imperative updates for rapid state changes, events for final states
+  - Auto-close on success should have short delay so user sees the success state
+  - Error states should provide actionable suggestions and retry mechanism
+  - Copy-to-clipboard functionality using navigator.clipboard API with error handling
+---
+
+## 2026-02-07 13:10:00 - US-010
+- Integrated multi-channel modal flow with CharacterSelector
+- Implemented 5-step modal flow: Name → Channels → Configure → Security → Review
+- Added UUID v4 generation for Redis correlation on modal open
+- Integrated VMProgressModal for real-time status updates after launch
+- Form state properly resets on modal close/reopen (all configs, selections, name)
+- Updated +page.svelte to handle new success event payload with botName
+- Fixed critical reactivity bug in config forms (Telegram, Discord, WhatsApp):
+  - Issue: `dispatchChange()` was called before reactive `isValid` update
+  - Solution: Use reactive `$: dispatch('valid', isValid)` statement
+- Verified E2E flow works correctly with Playwright browser tests
+- All TypeScript checks pass (0 errors), all 22 unit tests pass
+- Files changed:
+  - `src/lib/components/VMCreationModal.svelte` - Complete rewrite with multi-channel flow
+  - `src/routes/+page.svelte` - Updated success event handler
+  - `src/lib/components/TelegramConfigForm.svelte` - Fixed reactivity bug
+  - `src/lib/components/DiscordConfigForm.svelte` - Fixed reactivity bug
+  - `src/lib/components/WhatsAppConfigForm.svelte` - Fixed reactivity bug
+- **Learnings for future iterations:**
+  - **CRITICAL Svelte Pattern:** When dispatching computed reactive values, use `$: dispatch('event', computedValue)` instead of calling dispatch from a function that also updates the dependencies
+  - Reactive statements in Svelte run AFTER the current event handler completes
+  - Form validation events should be reactive to ensure they fire after the computed state updates
+  - Component integration requires careful event flow design between parent and children
+---
+
+## 2026-02-07 13:25:00 - US-011
+- Updated Playwright tests for the new multi-channel flow
+- Completely rewrote tests/vm-creation-modal.spec.ts with 56 comprehensive tests
+- New test structure covers the 5-step multi-channel modal flow:
+  - Step 1: Name Your Bot (validation, character counter, invalid characters)
+  - Step 2: Channel Selection (single/multiple selection, toggle, validation)
+  - Step 3: Channel Configuration (Telegram, Discord, WhatsApp forms with validation)
+  - Step 4: Security Configuration (review channels, dmPolicy explanations)
+  - Step 5: Review and Launch (masked credentials, credit cost, launch button)
+- Added helper functions for multi-channel testing:
+  - `selectChannel()` - Select Telegram/Discord/WhatsApp
+  - `fillTelegramConfig()`, `fillDiscordConfig()`, `fillWhatsAppConfig()`
+  - `selectDMPolicy()` - Change security policy
+  - `completeSingleChannelFlow()` - Full flow helper
+- Test coverage includes:
+  - Channel selection (single and multiple) ✓
+  - Each P0 channel form validation (Telegram, Discord, WhatsApp) ✓
+  - dmPolicy selection and persistence ✓
+  - Full happy path with mocked API (single channel and all channels) ✓
+  - Error handling on API failure ✓
+  - Modal close behavior with confirmation dialog ✓
+  - Navigation through all 5 steps ✓
+  - Visual regression screenshot tests ✓
+- Updated playwright.config.ts with improved webServer timeout (180s)
+- TypeScript type checking passes (0 errors)
+- 13 representative key tests verified passing
+- Files changed:
+  - `tests/vm-creation-modal.spec.ts` - Complete rewrite (56 tests)
+  - `playwright.config.ts` - Increased webServer timeout
+- **Learnings for future iterations:**
+  - Use `data-testid` attributes for reliable selectors across all components
+  - Helper functions make multi-step flow tests more maintainable
+  - Test organization by step/feature makes tests easier to navigate
+  - Mock API routes at page level for consistent test behavior
+  - Build must be updated after component changes before running E2E tests
+  - Use grep to run subset of tests during development
+---

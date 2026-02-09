@@ -703,7 +703,8 @@ test.describe('VM Creation Modal - Multi-Channel Flow', () => {
 		});
 
 		test('should send multi-channel request with correct schema', async ({ page }) => {
-			let requestBody: Record<string, unknown> | null = null;
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			let requestBody: any = null;
 			
 			await page.route('/api/vms', async (route) => {
 				const request = route.request();

@@ -147,7 +147,37 @@ function getRedisClient(): Redis | null {
 	}
 	
 	try {
-		redisClient = new Redis(redisUrl);
+		// Parse Redis URL to extract connection details
+		const url = new URL(redisUrl);
+		const isTls = url.protocol === 'rediss:';
+		
+		// Build connection options
+		const connectionOptions: Redis.RedisOptions = {
+			host: url.hostname,
+			port: parseInt(url.port, 10) || (isTls ? 443 : 6379),
+			retryStrategy: (times) => Math.min(times * 50, 2000),
+			maxRetriesPerRequest: 3,
+		};
+		
+		// Only set password if present
+		if (url.password) {
+			connectionOptions.password = decodeURIComponent(url.password);
+		}
+		
+		// Only set username if present (ACL style auth)
+		if (url.username) {
+			connectionOptions.username = decodeURIComponent(url.username);
+		}
+		
+		// Add TLS options for rediss:// connections
+		if (isTls) {
+			connectionOptions.tls = {
+				servername: url.hostname,
+				rejectUnauthorized: false, // Allow self-signed certificates
+			};
+		}
+		
+		redisClient = new Redis(connectionOptions);
 		return redisClient;
 	} catch (err) {
 		console.error('[VM Creation] Failed to connect to Redis:', err);
