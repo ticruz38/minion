@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { nanoid } from 'nanoid';
 import { getHealthyVms, selectBestVm } from '$lib/server/scheduler.js';
 import { registerBot, sendCommand, getTeamBots, type BotConfig, type BotCommand } from '$lib/server/bot-service.js';
+import { apiLogger } from '$lib/server/logger.js';
 
 /**
  * DM Policy types for channel security configuration
@@ -36,10 +37,19 @@ interface WhatsAppChannel {
 	allowedUsers?: string[];
 }
 
+interface SlackChannel {
+	enabled: true;
+	token: string;
+	signingSecret?: string;
+	dmPolicy: DMPolicy;
+	allowedUsers?: string[];
+}
+
 interface ChannelsConfig {
 	telegram?: TelegramChannel;
 	discord?: DiscordChannel;
 	whatsapp?: WhatsAppChannel;
+	slack?: SlackChannel;
 }
 
 /**
@@ -52,6 +62,9 @@ const telegramTokenRegex = /^\d+:[a-zA-Z0-9_-]+$/;
 
 // Discord token format: alphanumeric with dots and underscores
 const discordTokenRegex = /^[a-zA-Z0-9_.-]+$/;
+
+// Slack token format: starts with xoxb- for bot tokens
+const slackTokenRegex = /^xoxb-[a-zA-Z0-9-]+$/;
 
 // E.164 phone number format
 const phoneNumberRegex = /^\+[1-9]\d{1,14}$/;
@@ -92,11 +105,24 @@ const whatsappSchema = z.object({
 	allowedUsers: z.array(z.string()).optional()
 });
 
+// Slack channel schema
+const slackSchema = z.object({
+	enabled: z.literal(true),
+	token: z.string()
+		.regex(slackTokenRegex, 'Invalid Slack token format. Must start with xoxb-'),
+	signingSecret: z.string()
+		.optional(),
+	dmPolicy: z.enum(['pairing', 'allowlist', 'open'])
+		.default('pairing'),
+	allowedUsers: z.array(z.string()).optional()
+});
+
 // Channels schema - at least one channel must be enabled
 const channelsSchema = z.object({
 	telegram: telegramSchema.optional(),
 	discord: discordSchema.optional(),
-	whatsapp: whatsappSchema.optional()
+	whatsapp: whatsappSchema.optional(),
+	slack: slackSchema.optional()
 }).refine(
 	(channels) => {
 		// Check if at least one channel is enabled
@@ -128,10 +154,15 @@ type BotCreationRequest = z.infer<typeof botCreationSchema>;
 
 /**
  * Build the bot configuration from the creation request
+ * Includes model and API key from environment
  */
 function buildBotConfig(request: BotCreationRequest): BotConfig {
 	return {
 		name: request.name,
+		model: process.env.LLM_MODEL || 'moonshot/kimi-k2.5',
+		api_key: process.env.LLM_API_KEY || '',
+		memory: '2g',
+		cpus: '1',
 		channels: request.channels as ChannelsConfig
 	};
 }
@@ -150,7 +181,12 @@ function buildCreateCommand(
 		bot_id: botId,
 		team_id: teamId,
 		profiles,
-		config
+		config,
+		resources: {
+			memory: config.memory || '2g',
+			cpus: config.cpus || '1',
+			disk: '20'
+		}
 	};
 }
 
@@ -184,9 +220,18 @@ function buildCreateCommand(
  * Error: HTTP 503 Service Unavailable (no VMs available)
  */
 export const POST: RequestHandler = async ({ request }) => {
+	const requestId = nanoid(8);
+	apiLogger.info('[POST /api/bots] Bot creation request started', { requestId });
+	
 	try {
 		// Parse request body
 		const body = await request.json();
+		apiLogger.debug('Request body parsed', { requestId, bodySummary: {
+			name: body.name,
+			team_id: body.team_id,
+			minionId: body.minionId,
+			channels: body.channels ? Object.keys(body.channels) : []
+		}});
 		
 		// Validate with Zod
 		const validationResult = botCreationSchema.safeParse(body);
@@ -197,6 +242,8 @@ export const POST: RequestHandler = async ({ request }) => {
 				message: issue.message
 			}));
 			
+			apiLogger.warn('Validation failed', { requestId, errors });
+			
 			return json({
 				success: false,
 				message: 'Validation failed',
@@ -205,27 +252,56 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 		
 		const validatedData = validationResult.data;
+		apiLogger.debug('Validation passed', { requestId, validatedData: {
+			name: validatedData.name,
+			team_id: validatedData.team_id,
+			minionId: validatedData.minionId,
+			channels: Object.keys(validatedData.channels)
+		}});
 		
 		// Get healthy VMs and select the best one
+		apiLogger.debug('Fetching healthy VMs', { requestId });
 		const healthyVms = await getHealthyVms();
+		apiLogger.debug('Healthy VMs retrieved', { requestId, count: healthyVms.length });
+		
 		const selectedVm = selectBestVm(healthyVms);
 		
 		if (!selectedVm) {
+			apiLogger.error('No healthy VMs available', { requestId });
 			return json({
 				success: false,
 				message: 'No healthy VMs available. Please try again later.'
 			}, { status: 503 });
 		}
 		
+		apiLogger.info('VM selected for bot', { 
+			requestId, 
+			vmId: selectedVm.vm_id,
+			vmAvailableRam: selectedVm.ram_available 
+		});
+		
 		// Generate unique bot ID
 		const botId = `bot_${nanoid(10)}`;
 		const vmId = selectedVm.vm_id;
 		const teamId = validatedData.team_id;
 		
+		apiLogger.debug('Generated bot ID', { requestId, botId, vmId, teamId });
+		
 		// Build bot configuration
 		const botConfig = buildBotConfig(validatedData);
+		apiLogger.debug('Bot config built', { 
+			requestId, 
+			config: {
+				name: botConfig.name,
+				model: botConfig.model,
+				hasApiKey: !!botConfig.api_key,
+				memory: botConfig.memory,
+				cpus: botConfig.cpus
+			}
+		});
 		
 		// Register bot in Redis
+		apiLogger.info('Registering bot in Redis', { requestId, botId, vmId, teamId });
 		await registerBot(
 			botId,
 			vmId,
@@ -235,15 +311,28 @@ export const POST: RequestHandler = async ({ request }) => {
 		);
 		
 		// Build and send CREATE command to VM queue
+		apiLogger.info('Building CREATE command', { requestId, botId, vmId });
 		const createCommand = buildCreateCommand(
 			botId,
 			teamId,
 			[validatedData.minionId],
 			botConfig
 		);
+		
+		apiLogger.info('Sending CREATE command to VM queue', { 
+			requestId, 
+			botId, 
+			vmId,
+			commandType: createCommand.type 
+		});
 		await sendCommand(vmId, createCommand);
 		
-		console.log(`[Bot Creation] Created bot ${botId} for team ${teamId} on VM ${vmId}`);
+		apiLogger.info('Bot creation completed successfully', { 
+			requestId, 
+			botId, 
+			vmId, 
+			teamId 
+		});
 		
 		// Return success with bot details
 		return json({
@@ -254,7 +343,11 @@ export const POST: RequestHandler = async ({ request }) => {
 		}, { status: 201 });
 		
 	} catch (err) {
-		console.error('[Bot Creation Error]', err);
+		apiLogger.error('Bot creation failed', { 
+			requestId, 
+			error: err instanceof Error ? err.message : String(err),
+			stack: err instanceof Error ? err.stack : undefined
+		});
 		
 		if (err && typeof err === 'object' && 'status' in err) {
 			throw err;
@@ -284,21 +377,31 @@ export const POST: RequestHandler = async ({ request }) => {
  * Error: HTTP 400 (missing team_id)
  */
 export const GET: RequestHandler = async ({ url }) => {
+	const requestId = nanoid(8);
+	apiLogger.info('[GET /api/bots] Bot list request started', { requestId });
+	
 	try {
 		// Parse team_id query parameter
 		const teamId = url.searchParams.get('team_id');
 		
 		if (!teamId) {
+			apiLogger.warn('Missing team_id parameter', { requestId });
 			return json({
 				success: false,
 				message: 'Missing required query parameter: team_id'
 			}, { status: 400 });
 		}
 		
+		apiLogger.debug('Fetching bots for team', { requestId, teamId });
+		
 		// Get all bots for the team from Redis
 		const bots = await getTeamBots(teamId);
 		
-		console.log(`[Bot List] Retrieved ${bots.length} bots for team ${teamId}`);
+		apiLogger.info('Bot list retrieved', { 
+			requestId, 
+			teamId, 
+			count: bots.length 
+		});
 		
 		// Return array of bot objects with all Redis fields
 		return json({
@@ -307,7 +410,10 @@ export const GET: RequestHandler = async ({ url }) => {
 		}, { status: 200 });
 		
 	} catch (err) {
-		console.error('[Bot List Error]', err);
+		apiLogger.error('Failed to retrieve bot list', { 
+			requestId, 
+			error: err instanceof Error ? err.message : String(err) 
+		});
 		
 		return json({
 			success: false,

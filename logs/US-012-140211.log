@@ -161,139 +161,157 @@
 │ - Keep CI green                                                              │
 │ - Read the Codebase Patterns section in progress.txt before starting         │
 ╰──────────────────────────────────────────────────────────────────────────────╯
-• I need to start by understanding the project structure and requirements. The u
-  ser wants me to work on a software project following specific instructions. Le
-  t me begin by reading the PRD file and progress log to understand what needs t
-  o be done.
-• I'll start by reading the PRD and progress files to understand the project and
-  identify the highest priority user story to implement.
+• The user wants me to work on a user story from the PRD. Let me start by readin
+  g the PRD file and the progress log to understand what needs to be done.
+• I'll start by reading the PRD and progress files to understand the current sta
+  te and what needs to be implemented.
 • Used ReadFile (prd.json)
 • Used ReadFile (progress.txt)
-• Hmm, I've got a handle on the project state now. Looking at prd.json, US-001 t
-  hrough US-010 are all marked as passing. That means the foundational work—the
-  nanoid integration, the scheduler service, and the full suite of bot CRUD endp
-  oints—is technically complete.
+• I've reviewed the PRD and progress. The highest priority remaining story is US
+  -012: Deprecating the old VM creation endpoint. The goal is to keep the POST h
+  andler at /api/vms for backward compatibility, but add a deprecation log and a
+  header. Hmm... I need to see the current state of this file first to understan
+  d how the existing logic is implemented.
 
-  But wait, looking at the current status, US-011 and US-012 are still passes: f
-  alse. I need to pick the highest priority one. US-011 is priority 11 and US-01
-  2 is priority 12. Clearly, US-011 is the next logical step.
+  But wait, before I dive into the code changes, I need to verify my environment
+  . The PRD specifies that all work should be done on the ralph/bot-orchestratio
+  n-api branch. I should check which branch I'm currently on. It's possible I'm
+  still on main or a different feature branch. If I don't verify this now, I ris
+  k making changes to the wrong codebase entirely, which would break the project
+  workflow.
 
-  Let me think about what US-011 entails: "Update GET /api/vms endpoint." Curren
-  tly, the scheduler service is already fetching healthy VMs, but this story spe
-  cifically asks for VM capacity metrics—RAM, CPU, and active bot counts.
+  Actually, looking at the history in progress.txt, it seems like the previous s
+  tories were already merged or committed to this branch. I'll check the current
+  git status to confirm the active branch and see if there are any uncommitted c
+  hanges that might interfere with the next task. Once I've confirmed the branch
+  , I'll examine the /api/vms endpoint code to identify the best place to inject
+  the deprecation warning and header.
+• I can see that US-012 is the only remaining story with passes: false. This sto
+  ry requires deprecating the old VM creation endpoint by adding a deprecation w
+  arning log and header while keeping it for backward compatibility.
 
-  Actually, before I start hacking away at the code, I need to verify the branch
-  state. The PRD specifies ralph/bot-orchestration-api. I should check if I'm cu
-  rrently on that branch. If I'm not, I'll need to switch over. Also, I need to
-  see the current implementation of the VMs endpoint. Is it just a placeholder?
-  Does it return raw data? Knowing the existing structure is crucial before I ca
-  n refactor it to include the new health and capacity logic mentioned in the ac
-  ceptance criteria.
-
-  So, the immediate plan is: check the git branch, then read the existing /src/r
-  outes/api/vms/+server.ts to see how the VM list is currently being handled. Th
-  is will give me the necessary context to implement the health checks and metri
-  c parsing required by US-011.
-• I can see from the PRD that US-001 through US-010 are complete (passes: true).
-  The highest priority story with passes: false is US-011 (priority 11), followe
-  d by US-012 (priority 12).
-
-  Let me check the current branch and existing VM endpoint structure:
-• Used Shell (cd /root/code/minion && git branch --show-current)
+  Let me first check the current branch and then examine the existing files:
+• Used Shell (cd /root/code/minion && g...how-current && git status)
 • Used ReadFile (src/routes/api/vms/+server.ts)
-• Now I understand the current state. The GET handler at the bottom is just a pl
-  aceholder. I need to update it to use the scheduler service to get healthy VMs
-  with their metrics.
+• I need to implement the deprecation logic for the old VM creation endpoint. Th
+  e requirements are clear: add a console.warn for internal tracking, a specific
+  response header for clients, and forward the logic to the new endpoint.
 
-  Let me also check the scheduler service to understand what functions are avail
-  able:
-• Let me also check the scheduler service to understand the available functions:
-• Used ReadFile (src/lib/server/scheduler.ts)
-• Hmm, the current GET handler in api/vms is far too basic. It just returns an e
-  mpty list, but we need to surface actual VM data. I see that the scheduler mod
-  ule in the project already has a getHealthyVms function that returns the neces
-  sary metrics: RAM, CPU, and heartbeat status.
+  Actually, I should check the target file first. I'll need to import nanoid for
+  the new bot creation flow and the bot-service functions. If I just start editi
+  ng, I might miss how the existing Redis logic is currently handled or how the
+  POST request is structured.
 
-  Wait, if I look at the scheduler's definition, it returns objects that include
-  is_healthy, but for the API response, we want the raw status and the heartbeat
-  timestamp. This allows the frontend to make its own determination about health
-  or display the 'last seen' time. Actually, using getHealthyVms is better than
-  querying all VMs because it likely already handles the Redis connection and fi
-  ltering logic, ensuring we only report on VMs that are currently active in the
-  cluster.
+  Wait, I also need to verify the existing schema and the overall structure of t
+  he handler to ensure the "forwarding" doesn't break existing validation. It's
+  best to examine the current implementation of src/routes/api/bots/+server.ts f
+  irst. This will help me determine the exact imports needed and how to properly
+  integrate the new bot service calls while maintaining the legacy interface as
+  a wrapper.
 
-  I'll modify the GET handler in /root/code/minion/src/routes/api/vms/+server.ts
-  to import the scheduler and return the full list of healthy VMs. This satisfie
-  s the US-011 requirement to show VM capacity and status. I'll update the handl
-  er now.
-• Now I have a clear picture. The scheduler service has getHealthyVms() which re
-  turns VMs with all the metrics needed. I need to update the GET handler in /ap
-  i/vms/+server.ts to use this function.
+  Let me also check the new bot creation endpoint to understand how to forward t
+  he request:
+• Let me also check the new bot creation endpoint to understand how to forward t
+  he request:
+• Used ReadFile (src/routes/api/bots/+server.ts)
+• I need to update the deprecated POST handler in src/routes/api/vms/+server.ts.
+  The goal is to add a deprecation warning and an X-Deprecated header while reus
+  ing the logic from the new /api/bots endpoint.
 
-  Let me implement US-011:
+  Looking at the current structure, the old endpoint uses a schema that includes
+  an id field for the command, which is no longer needed in the new logic. Hmm,
+  the new botCreationSchema requires team_id and channels. I'll need to map the
+  legacy token to the new structure for compatibility.
+
+  Wait, I also need to ensure that the response headers are set correctly. In Sv
+  elteKit, this means passing a headers object to the json helper.
+
+  Actually, the best way to handle this is to treat the deprecated endpoint as a
+  proxy. I'll update the imports to bring in nanoid and the new service logic, t
+  hen refactor the POST function to perform the necessary transformations before
+  calling the shared creation logic. This ensures consistency across the API whi
+  le clearly signaling the deprecation to the client.
+
+  I'll start by modifying the server file to implement these changes.
+• Now I understand the structure. The /api/vms endpoint has a POST handler that
+  needs to be deprecated. I need to:
+
+  1. Add a deprecation warning log
+  2. Add X-Deprecated: true header in the response
+  3. Forward to the new bot creation logic (adapt the old request format to the
+     format)
+
+  Let me update the src/routes/api/vms/+server.ts file:
 • Used StrReplaceFile (src/routes/api/vms/+server.ts)
-• Now I need to update the GET handler to use getHealthyVms() and return the VMs
-  with parsed metrics.
-• Used StrReplaceFile (src/routes/api/vms/+server.ts)
-• Now let me run the TypeScript check to verify everything is working correctly.
-• Now let me run the type check to verify the implementation:
+• Now let me run the TypeScript typecheck to make sure everything compiles corre
+  ctly.
+• Now let me run the typecheck to make sure everything compiles correctly:
 • Used Shell (cd /root/code/minion && npm run check 2>&1)
-• Type checking passed - only warnings, no errors. Now let me verify the updated
-  file looks correct and then proceed to update the PRD and progress log.
-• Type checking passes. Let me verify the updated GET handler looks correct:
-• Used ReadFile (src/routes/api/vms/+server.ts)
-• The implementation looks good. Now I need to:
+• The typecheck passes. There are 2 warnings but they are pre-existing warnings
+  not related to my changes:
 
-  1. Update the PRD to mark US-011 as passing
-  2. Append to progress.txt
+  1. Unused export property in VMProgressModal.svelte
+  2. A11y warning in +page.svelte
 
-  Let me do both of those now.
-• The implementation is complete. Now let me update the PRD to mark US-011 as pa
-  ssing and append to progress.txt:
+  Now let me verify the changes were applied correctly by reading the updated fi
+  le:
+• Typecheck passes. The warnings are pre-existing and not related to my changes.
+  Let me verify the changes were applied correctly:
+• Used Shell (cd /root/code/minion && h...routes/api/vms/+server.ts)
+• The imports look correct. Now let me check the POST handler to verify the depr
+  ecation warning and headers are in place.
+• Used Grep (console\.warn\(['DEPRECATED\])
+• Used Grep (X-Deprecated)
+• Hmm, the grep for the deprecation warning didn't find anything. Let me check w
+  hat the warning line actually looks like.
+• Used Grep (DEPRECATED)
+• The deprecation warning is in place. The grep didn't find it earlier because I
+  used the wrong pattern (with ['DEPRECATED] instead of [DEPRECATED]). Now let m
+  e commit the changes and update the PRD and progress files.
+• The changes are in place. Let me commit the changes:
+• Used Shell (cd /root/code/minion && g...old VM creation endpoint")
+• The commit was successful. Now let me update the PRD to set passes: true for U
+  S-012:
+• Now let me update the PRD to mark US-012 as passing:
 • Used StrReplaceFile (prd.json)
-• Used StrReplaceFile (progress.txt)
-• Now let me check if there's an AGENTS.md file that needs updating. Looking at
-  the current directory structure, there's an AGENTS.md in the root. Let me chec
-  k if the changes I made warrant any updates to it.
+• Now let me update the progress.txt file to add the entry for US-012. I need to
+  append to the file.
+• Now let me update the progress.txt file with the new entry:
+• Used WriteFile (progress.txt)
+• Now let me verify all stories are complete by checking the PRD:
+• Let me verify all stories are now complete:
+• Used Shell (cd /root/code/minion && grep '"passes":' prd.json)
+• All 12 user stories now have passes: true. Let me verify by listing all story
+  IDs:
+• All 12 user stories are now passing. Let me list them to confirm:
+• Used Shell (cd /root/code/minion && j...es: \(.passes)"' prd.json)
+• All 12 user stories are complete. Let me now commit the PRD and progress.txt c
+  hanges:
+• Let me commit the PRD and progress updates:
+• Used Shell (cd /root/code/minion && g...ss for US-012 completion")
+• All 12 user stories are now complete. Let me provide the final summary to the
+  user.
+• All user stories have been completed. Here's a summary of what was implemented
+  in US-012:
 
-  The changes I made:
+  US-012 Complete: Deprecate old VM creation endpoint
 
-  1. Updated GET /api/vms endpoint to use scheduler service
-  2. Returns VM capacity and health metrics
+  Changes made to src/routes/api/vms/+server.ts:
 
-  This is a specific API endpoint change. Looking at the AGENTS.md, it contains
-  general patterns about the project structure, not specific endpoint documentat
-  ion. I don't think this requires updating AGENTS.md as it's a straightforward
-  implementation of an existing endpoint using existing patterns.
+  1. Added deprecation warning log at the start of the POST handler:
+     console.warn('[DEPRECATED] POST /api/vms is deprecated, use POST /api/bots'
+  2. Added X-Deprecated: true header to all response paths (validation error, no
+     s available, success, and error cases)
+  3. Forwarded request to new bot creation logic by:
+    • Importing nanoid, scheduler functions (getHealthyVms, selectBestVm), and b
+      ervice functions (registerBot, sendCommand)
+    • Using selectBestVm() to select the best available VM
+    • Generating bot ID with bot_${nanoid(10)}
+    • Registering bot in Redis via registerBot()
+    • Sending CREATE command via sendCommand()
+  4. Maintained backward compatibility by keeping:
+    • Same HTTP 202 status code
+    • Same response format with commandId and vm object
+    • Same validation schema
 
-  Now let me commit the changes.
-• Now let me commit the changes:
-• Used Shell (cd /root/code/minion && g...te GET /api/vms endpoint")
-• Hmm, the implementation for US-011 is now complete. I've successfully updated
-  the GET /api/vms endpoint to fetch data from the Redis-backed scheduler servic
-  e. Wait, let me double-check the requirements one last time. It needed to retu
-  rn all VM metrics with the is_healthy flag calculated from the 2-minute heartb
-  eat threshold. Looking at my code, I'm mapping the VMWithHealth objects direct
-  ly to the JSON response, which satisfies this. Actually, the typecheck passed
-  perfectly, so the integration of the scheduler.ts logic is solid.
-
-  Looking at the current state of the project, I've addressed the core infrastru
-  cture for VM management as requested. However, I still have US-012 left on my
-  plate. I've kept the PRD and progress.txt updated throughout this process to e
-  nsure nothing falls through the cracks. Since there is still one more user sto
-  ry (US-012) that hasn't been marked as passing, the overall task isn't finishe
-  d yet. I have finished everything required for US-011 and am ready to move on
-  to the final stage once the next task is assigned.
-• US-011 is now complete. I've:
-
-  1. Implemented the GET /api/vms endpoint to return VM capacity and health stat
-  2. Used getHealthyVms() from the scheduler service
-  3. Returned all VMs with parsed metrics (vm_id, status, ram_total, ram_availab
-     ram_used, cpus, bot_count, last_heartbeat, is_healthy)
-  4. Passed typecheck
-  5. Committed with message: feat: US-011 - Update GET /api/vms endpoint
-  6. Updated the PRD and progress.txt
-
-  There is still US-012 remaining (passes: false) - "Deprecate old VM creation e
-  ndpoint" with priority 12. This story will add a deprecation warning and heade
-  r to the POST handler in /api/vms for backward compatibility.
+  <promise>COMPLETE</promise>

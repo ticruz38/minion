@@ -91,6 +91,7 @@
   // VM Progress Modal state
   let showProgressModal = false;
   let progressModalComponent: VMProgressModal;
+  let createdBotId = ''; // Store the bot_id from successful creation
 
   // Credit constants
   const HOURLY_RATE = 95;
@@ -290,15 +291,16 @@
     // Show progress modal
     showProgressModal = true;
 
-    // Build the request body
+    // Build the request body for new /api/bots endpoint
+    // Note: team_id is required - using 'default' for now until auth is fully integrated
     const requestBody: {
-      id: string;
       name: string;
+      team_id: string;
       minionId: string;
       channels: Record<string, unknown>;
     } = {
-      id: commandId,
       name: botName,
+      team_id: 'default', // TODO: Get from user session when auth is integrated
       minionId: selectedMinion.id,
       channels: {}
     };
@@ -334,7 +336,7 @@
     }
 
     try {
-      const response = await fetch('/api/vms', {
+      const response = await fetch('/api/bots', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
@@ -343,33 +345,12 @@
       const result = await response.json();
       
       if (response.ok && result.success) {
-        // Update progress modal with acknowledged status
-        progressModalComponent?.updateStatus({
-          status: 'acknowledged',
-          message: 'Request received by backend'
-        });
+        // Store the bot_id for SSE connection
+        createdBotId = result.bot_id;
+        console.log(`[VMCreationModal] Bot created with ID: ${createdBotId}, connecting to SSE...`);
 
-        // Start polling for status updates (in real implementation, this would use WebSocket or SSE)
-        // For now, simulate the flow
-        setTimeout(() => {
-          progressModalComponent?.updateStatus({
-            status: 'creating',
-            message: 'Creating your bot VM...'
-          });
-        }, 1500);
-
-        // Simulate success (in production, this would come from Redis/SSE)
-        setTimeout(() => {
-          progressModalComponent?.updateStatus({
-            status: 'success',
-            vmId: result.commandId || commandId,
-            connectionInfo: {
-              ...(selectedChannels.telegram && { telegram: { botUsername: `${botName.toLowerCase()}_bot` } }),
-              ...(selectedChannels.discord && { discord: { botUsername: botName } }),
-              ...(selectedChannels.whatsapp && { whatsapp: { phoneNumber: whatsappConfig.phoneNumber } })
-            }
-          });
-        }, 3500);
+        // The SSE connection in VMProgressModal will handle real-time updates
+        // No need for simulated timeouts anymore
       } else {
         launchError = result.message || 'Failed to launch bot. Please try again.';
         progressModalComponent?.updateStatus({
@@ -413,6 +394,7 @@
   function handleProgressRetry() {
     // Retry the launch
     showProgressModal = false;
+    createdBotId = '';
     progressModalComponent?.reset();
     handleLaunch();
   }
@@ -479,6 +461,7 @@
     discordValid = false;
     whatsappValid = false;
     commandId = '';
+    createdBotId = '';
     launchError = '';
     isLaunching = false;
   }
@@ -841,6 +824,7 @@
   bind:this={progressModalComponent}
   isOpen={showProgressModal}
   {commandId}
+  botId={createdBotId}
   minionColor={selectedMinion?.color || '#6366f1'}
   isTesting={isTesting}
   on:close={handleProgressClose}

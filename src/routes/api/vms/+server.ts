@@ -5,6 +5,7 @@ import { nanoid } from 'nanoid';
 import Redis, { type RedisOptions } from 'ioredis';
 import { getHealthyVms, selectBestVm, type VMWithHealth } from '$lib/server/scheduler.js';
 import { registerBot, sendCommand, type BotConfig, type BotCommand } from '$lib/server/bot-service.js';
+import { apiLogger } from '$lib/server/logger.js';
 
 
 /**
@@ -231,6 +232,7 @@ function buildRedisPayload(request: VMCreationRequest, commandId: string): Recor
 
 /**
  * Build the bot configuration from the VM creation request
+ * Includes model and API key from environment
  */
 function buildBotConfigFromVmRequest(request: VMCreationRequest): BotConfig {
 	// Support both legacy (token) and new (channels) formats
@@ -252,6 +254,10 @@ function buildBotConfigFromVmRequest(request: VMCreationRequest): BotConfig {
 	
 	return {
 		name: request.name,
+		model: process.env.LLM_MODEL || 'moonshot/kimi-k2.5',
+		api_key: process.env.LLM_API_KEY || '',
+		memory: '2g',
+		cpus: '1',
 		channels
 	};
 }
@@ -270,7 +276,12 @@ function buildCreateCommand(
 		bot_id: botId,
 		team_id: teamId,
 		profiles,
-		config
+		config,
+		resources: {
+			memory: config.memory || '2g',
+			cpus: config.cpus || '1',
+			disk: '20'
+		}
 	};
 }
 
@@ -304,8 +315,9 @@ function buildCreateCommand(
  * }
  */
 export const POST: RequestHandler = async ({ request }) => {
+	const requestId = nanoid(8);
 	// Log deprecation warning
-	console.warn('[DEPRECATED] POST /api/vms is deprecated, use POST /api/bots');
+	apiLogger.warn('[DEPRECATED] POST /api/vms is deprecated, use POST /api/bots', { requestId });
 	
 	try {
 		// Parse request body
@@ -374,7 +386,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		);
 		await sendCommand(vmId, createCommand);
 		
-		console.log(`[VM Creation - DEPRECATED] Created bot ${botId} for team ${teamId} on VM ${vmId}`);
+		apiLogger.info('[VM Creation - DEPRECATED] Bot created successfully', { 
+			requestId, botId, vmId, teamId 
+		});
 		
 		// Return HTTP 202 Accepted with deprecation header (maintaining old response format for compatibility)
 		return json({
@@ -391,7 +405,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		});
 		
 	} catch (err) {
-		console.error('[VM Creation Error]', err);
+		apiLogger.error('[VM Creation Error - DEPRECATED]', { 
+			requestId, 
+			error: err instanceof Error ? err.message : String(err) 
+		});
 		
 		if (err && typeof err === 'object' && 'status' in err) {
 			throw err;
@@ -414,9 +431,14 @@ export const POST: RequestHandler = async ({ request }) => {
  * Queries Redis for vm:* keys and returns parsed metrics
  */
 export const GET: RequestHandler = async () => {
+	const requestId = nanoid(8);
+	apiLogger.debug('[GET /api/vms] VM list request', { requestId });
+	
 	try {
 		// Get all VMs with health information from scheduler
 		const vms = await getHealthyVms();
+
+		apiLogger.debug('VM list retrieved', { requestId, count: vms.length });
 
 		return json({
 			success: true,
@@ -433,7 +455,10 @@ export const GET: RequestHandler = async () => {
 			}))
 		});
 	} catch (err) {
-		console.error('[VM List Error]', err);
+		apiLogger.error('[VM List Error]', { 
+			requestId, 
+			error: err instanceof Error ? err.message : String(err) 
+		});
 
 		return json({
 			success: false,

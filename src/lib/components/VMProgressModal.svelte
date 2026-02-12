@@ -28,8 +28,10 @@
   // Props
   export let isOpen = false;
   export let commandId = ''; // For external reference - parent can read this value
+  export let botId = ''; // Bot ID for SSE connection
   export let minionColor = '#6366f1';
   export let isTesting = false;
+  export let botName = ''; // Bot name to display
 
   // Internal state
   let progressData: VMProgressData = {
@@ -38,6 +40,7 @@
   let progressPercent = 0;
   let progressInterval: ReturnType<typeof setInterval> | null = null;
   let modalElement: HTMLDivElement;
+  let eventSource: EventSource | null = null;
 
   // Event dispatcher
   const dispatch = createEventDispatcher<{
@@ -75,6 +78,79 @@
         progressPercent = Math.min(90, progressPercent + 2);
       }
     }, 500);
+  }
+
+  // Connect to SSE endpoint for real-time updates
+  function connectSSE() {
+    if (!botId || typeof window === 'undefined') return;
+
+    // Close existing connection if any
+    closeSSE();
+
+    const sseUrl = `/api/bots/${botId}/events`;
+    console.log(`[VMProgressModal] Connecting to SSE: ${sseUrl}`);
+
+    eventSource = new EventSource(sseUrl);
+
+    eventSource.onopen = () => {
+      console.log('[VMProgressModal] SSE connection opened');
+    };
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('[VMProgressModal] SSE message received:', data);
+
+        // Map SSE event to progress data
+        switch (data.status) {
+          case 'ACKNOWLEDGED':
+            updateStatus({
+              status: 'acknowledged',
+              message: data.message || 'Request acknowledged by backend'
+            });
+            break;
+          case 'SUCCESS':
+            updateStatus({
+              status: 'success',
+              vmId: data.data?.vmId || botId,
+              connectionInfo: data.data?.connectionInfo,
+              message: data.message || 'Bot created successfully'
+            });
+            closeSSE(); // Close connection on success
+            break;
+          case 'ERROR':
+            updateStatus({
+              status: 'error',
+              error: data.error || { code: 'UNKNOWN_ERROR', message: data.message || 'Unknown error' }
+            });
+            closeSSE(); // Close connection on error
+            break;
+        }
+      } catch (err) {
+        console.error('[VMProgressModal] Failed to parse SSE message:', err);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.error('[VMProgressModal] SSE error:', err);
+      // Only show error if we haven't already reached a terminal state
+      if (progressData.status !== 'success' && progressData.status !== 'error') {
+        updateStatus({
+          status: 'error',
+          error: { code: 'SSE_ERROR', message: 'Lost connection to server' }
+        });
+      }
+      closeSSE();
+    };
+  }
+
+  // Close SSE connection
+  function closeSSE() {
+    if (eventSource) {
+      console.log('[VMProgressModal] Closing SSE connection');
+      eventSource.close();
+      eventSource = null;
+    }
   }
 
   function stopProgressAnimation() {
@@ -153,14 +229,26 @@
     if (typeof window !== 'undefined') {
       window.addEventListener('keydown', handleKeyDown);
     }
+    // Connect to SSE when modal opens with a botId
+    if (isOpen && botId) {
+      connectSSE();
+    }
   });
 
   onDestroy(() => {
     stopProgressAnimation();
+    closeSSE();
     if (typeof window !== 'undefined') {
       window.removeEventListener('keydown', handleKeyDown);
     }
   });
+
+  // Watch for modal open/close and botId changes
+  $: if (isOpen && botId && typeof window !== 'undefined') {
+    connectSSE();
+  } else if (!isOpen) {
+    closeSSE();
+  }
 
   // Get status icon based on current state
   function getStatusIcon(): string {
@@ -207,7 +295,7 @@
       }}
       data-testid="vm-progress-modal"
     >
-      <!-- Header -->
+        <!-- Header -->
       <div class="modal-header">
         <div class="status-icon" aria-hidden="true">
           {#if progressData.status === 'success'}

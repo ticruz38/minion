@@ -1,102 +1,27 @@
 <script lang="ts">
   import { onMount, createEventDispatcher } from 'svelte';
   import MinionAvatar3D from './MinionAvatar3D.svelte';
+  import { minions } from '$lib/minions-data';
 
   // Event dispatcher for hire action
   const dispatch = createEventDispatcher<{
     hire: { id: string; name: string; color: string };
   }>();
-
-  interface Minion {
-    id: string;
-    name: string;
-    tagline: string;
-    description: string;
-    features: string[];
-    color: string;
-    stats: { label: string; value: number }[];
-  }
-
-  const minions: Minion[] = [
-    {
-      id: 'accountant',
-      name: 'Benny',
-      tagline: 'Your books, perfectly balanced',
-      description: 'Handles invoicing, expense tracking, tax prep, and financial reports.',
-      features: ['Invoicing', 'Expense Tracking', 'Tax Reports', 'Bank Reconciliation'],
-      color: '#10b981',
-      stats: [
-        { label: 'Accuracy', value: 98 },
-        { label: 'Speed', value: 85 },
-        { label: 'Detail', value: 95 }
-      ]
-    },
-    {
-      id: 'realtor',
-      name: 'Owen',
-      tagline: 'Never miss a good deal',
-      description: 'Scans listings 24/7, alerts you to opportunities, tracks market trends.',
-      features: ['Listing Alerts', 'Market Analysis', 'Property Database', 'Lead Tracking'],
-      color: '#f59e0b',
-      stats: [
-        { label: 'Speed', value: 95 },
-        { label: 'Coverage', value: 90 },
-        { label: 'Insight', value: 88 }
-      ]
-    },
-    {
-      id: 'analyst',
-      name: 'Barry',
-      tagline: 'Data-driven decisions',
-      description: 'Monitors markets, analyzes portfolios, generates reports.',
-      features: ['Portfolio Tracking', 'Market Alerts', 'Risk Analysis', 'Report Generation'],
-      color: '#8b5cf6',
-      stats: [
-        { label: 'Analysis', value: 98 },
-        { label: 'Prediction', value: 85 },
-        { label: 'Depth', value: 92 }
-      ]
-    },
-    {
-      id: 'restaurant',
-      name: 'Sergio',
-      tagline: 'Your virtual maître d\'',
-      description: 'Takes reservations, manages orders, coordinates with kitchen.',
-      features: ['Table Booking', 'Order Taking', 'Customer Chat', 'Staff Coordination'],
-      color: '#ef4444',
-      stats: [
-        { label: 'Service', value: 96 },
-        { label: 'Speed', value: 92 },
-        { label: 'Charm', value: 94 }
-      ]
-    },
-    {
-      id: 'scheduler',
-      name: 'Terry',
-      tagline: 'Your calendar, optimized',
-      description: 'Manages appointments, finds optimal meeting times, sends reminders.',
-      features: ['Smart Scheduling', 'Conflict Resolution', 'Auto Reminders', 'Time Blocking'],
-      color: '#06b6d4',
-      stats: [
-        { label: 'Efficiency', value: 97 },
-        { label: 'Flexibility', value: 88 },
-        { label: 'Reliability', value: 99 }
-      ]
-    },
-    {
-      id: 'support',
-      name: 'Tim',
-      tagline: 'Always on, always helpful',
-      description: 'Answers customer queries, routes complex issues, maintains FAQs.',
-      features: ['24/7 Response', 'Ticket Routing', 'FAQ Management', 'Escalation'],
-      color: '#ec4899',
-      stats: [
-        { label: 'Response', value: 99 },
-        { label: 'Knowledge', value: 90 },
-        { label: 'Empathy', value: 95 }
-      ]
-    }
-  ];
+  
+  // Transform new minion data to component format
+  const selectorMinions = minions.slice(0, 6).map(m => ({
+    id: m.id,
+    name: m.name,
+    tagline: m.description.split('.')[0] + '.',
+    description: m.description,
+    features: m.skills.slice(0, 4).map(s => s.name),
+    color: m.color,
+    stats: [
+      { label: 'Skills', value: m.skills.length * 20 },
+      { label: 'P0 Critical', value: m.skills.filter(s => s.priority === 'P0').length * 25 },
+      { label: 'Utility', value: Math.floor(Math.random() * 20) + 80 }
+    ]
+  }));
 
   let selectedIndex = 0;
   let hoveredIndex = -1;
@@ -105,7 +30,7 @@
   let touchStartX = 0;
   let touchEndX = 0;
 
-  $: selectedMinion = minions[selectedIndex];
+  $: selectedMinion = selectorMinions[selectedIndex];
 
   function selectMinion(index: number) {
     if (isAnimating || index === selectedIndex) return;
@@ -147,11 +72,11 @@
     if (Math.abs(diff) > swipeThreshold) {
       if (diff > 0) {
         // Swipe left - next
-        const nextIndex = selectedIndex === minions.length - 1 ? 0 : selectedIndex + 1;
+        const nextIndex = selectedIndex === selectorMinions.length - 1 ? 0 : selectedIndex + 1;
         selectMinion(nextIndex);
       } else {
         // Swipe right - previous
-        const prevIndex = selectedIndex === 0 ? minions.length - 1 : selectedIndex - 1;
+        const prevIndex = selectedIndex === 0 ? selectorMinions.length - 1 : selectedIndex - 1;
         selectMinion(prevIndex);
       }
     }
@@ -170,13 +95,13 @@
       switch (e.key) {
         case 'ArrowLeft':
           e.preventDefault();
-          const prevIndex = selectedIndex === 0 ? minions.length - 1 : selectedIndex - 1;
+          const prevIndex = selectedIndex === 0 ? selectorMinions.length - 1 : selectedIndex - 1;
           selectMinion(prevIndex);
           break;
         case 'ArrowRight':
         case ' ': // Space also works
           e.preventDefault();
-          const nextIndex = selectedIndex === minions.length - 1 ? 0 : selectedIndex + 1;
+          const nextIndex = selectedIndex === selectorMinions.length - 1 ? 0 : selectedIndex + 1;
           selectMinion(nextIndex);
           break;
         case 'Enter':
@@ -218,20 +143,20 @@
     >
       <!-- Mobile: Show dots for navigation -->
       <div class="carousel-dots mobile-only">
-        {#each minions as _, i}
+        {#each selectorMinions as _, i}
           <button 
             class="dot"
             class:active={i === selectedIndex}
-            style="--dot-color: {minions[i].color}"
+            style="--dot-color: {selectorMinions[i].color}"
             on:click={() => selectMinion(i)}
-            aria-label="Select {minions[i].name}"
+            aria-label="Select {selectorMinions[i].name}"
           />
         {/each}
       </div>
 
       <!-- Desktop: 3D Carousel -->
       <div class="carousel-3d desktop-only">
-        {#each minions as minion, i}
+        {#each selectorMinions as minion, i}
           {@const isActive = i === selectedIndex}
           {@const isHovered = i === hoveredIndex}
           {@const isAdjacent = Math.abs(i - selectedIndex) === 1}
@@ -290,7 +215,7 @@
 
       <!-- Mobile: Thumbnail Strip -->
       <div class="mobile-thumbnails mobile-only">
-        {#each minions as minion, i}
+        {#each selectorMinions as minion, i}
           <button
             class="thumbnail"
             class:active={i === selectedIndex}
