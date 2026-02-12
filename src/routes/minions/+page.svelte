@@ -38,6 +38,8 @@
     let eventSource: EventSource | null = null;
     let botStatus: "pending" | "acknowledged" | "ready" | "error" = "pending";
     let botConnectionInfo: any = null;
+    let selectedEmotion: "neutral" | "happy" | "excited" | "focused" | "sad" | "wonder" = "neutral";
+    let emotionTimeout: ReturnType<typeof setTimeout> | null = null;
 
     // Filter logic
     $: filteredIndices = searchQuery
@@ -59,6 +61,11 @@
     $: selectedMinionIndex = selectedMinion 
         ? visibleMinions.findIndex(m => m.id === selectedMinionId)
         : -1;
+    
+    // Reset emotion when no minion is selected
+    $: if (!selectedMinion) {
+        setEmotion("neutral");
+    }
 
     // Autocomplete suggestions
     $: autocompleteSuggestions =
@@ -101,6 +108,8 @@
         const minion = visibleMinions[index];
         if (minion) {
             selectedMinionId = minion.id;
+            // Reset emotion when selecting a different minion
+            setEmotion("neutral");
         }
     }
 
@@ -209,6 +218,23 @@
         }
     }
 
+    function setEmotion(emotion: typeof selectedEmotion, durationMs: number = 0) {
+        // Clear any existing timeout
+        if (emotionTimeout) {
+            clearTimeout(emotionTimeout);
+            emotionTimeout = null;
+        }
+        
+        selectedEmotion = emotion;
+        
+        // Auto-calm after duration if specified
+        if (durationMs > 0) {
+            emotionTimeout = setTimeout(() => {
+                selectedEmotion = "neutral";
+            }, durationMs);
+        }
+    }
+
     function startHiring() {
         if (!selectedMinion) return;
         isHiring = true;
@@ -220,6 +246,8 @@
         apiKey = "";
         signingSecret = "";
         isLaunching = false;
+        // Minion is happy about being considered for hire! Calms down after 5 seconds
+        setEmotion("happy", 5000);
         createdBotId = "";
         launchError = "";
     }
@@ -235,6 +263,7 @@
         botConnectionInfo = null;
         createdTeamId = "";
         isNewTeam = false;
+        setEmotion("neutral");
     }
 
     function selectChannel(channel: string) {
@@ -282,6 +311,8 @@
                         botStatus = "ready";
                         botConnectionInfo = data.data?.connectionInfo || null;
                         hireStep = "success";
+                        // The minion is super excited about being hired! (excited for 5 seconds then calm)
+                        setEmotion("excited", 5000);
                         eventSource?.close();
                         eventSource = null;
                         break;
@@ -342,6 +373,8 @@
                 createdBotId = result.bot_id;
                 createdTeamId = result.team_id;
                 isNewTeam = result.is_new_team || false;
+                // Make the minion happy about being hired! (happy for 3 seconds)
+                setEmotion("happy", 3000);
                 // Start listening for Redis events
                 connectToBotEvents(result.bot_id);
             } else {
@@ -355,10 +388,9 @@
     }
 
     $: isNameValid =
-        (botName.length >= 3 &&
-            botName.length <= 30 &&
-            /^[a-zA-Z0-9-]+$/.test(botName)) ||
-        botName === "";
+        botName.length >= 3 &&
+        botName.length <= 30 &&
+        /^[a-zA-Z0-9-]+$/.test(botName);
     $: canLaunch = selectedChannel && (
         (selectedChannel === "whatsapp" && phoneNumber.length >= 8 && apiKey.length >= 3) ||
         ((selectedChannel === "telegram" || selectedChannel === "discord" || selectedChannel === "slack") && botToken.length >= 10)
@@ -397,6 +429,9 @@
             eventSource.close();
             eventSource = null;
         }
+        if (emotionTimeout) {
+            clearTimeout(emotionTimeout);
+        }
     });
 </script>
 
@@ -418,6 +453,7 @@
             onSelectMinion={handleSelectMinion}
             filterIndices={filteredIndices.length > 0 ? filteredIndices : null}
             layout={filteredIndices.length < 5 ? "carousel" : "grid"}
+            {selectedEmotion}
         />
         <div class="scene-overlay"></div>
     </div>
@@ -724,6 +760,14 @@
                             <div
                                 class="form-step"
                                 in:fly={{ x: 20, duration: 200 }}
+                                on:keydown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        if (isNameValid) {
+                                            hireStep = 'channel';
+                                        }
+                                    }
+                                }}
                             >
                                 <h3>Name your minion</h3>
                                 <div class="input-wrap">
@@ -733,6 +777,7 @@
                                         placeholder="e.g., {selectedMinion.name}Bot"
                                         bind:value={botName}
                                         maxlength="30"
+                                        autofocus
                                     />
                                     <span class="char-count"
                                         >{botName.length}/30</span
@@ -742,10 +787,14 @@
                                     <span class="error-hint"
                                         >3-30 letters, numbers, or hyphens</span
                                     >
+                                {:else if !isNameValid}
+                                    <span class="error-hint"
+                                        >Name is required (3-30 letters, numbers, or hyphens)</span
+                                    >
                                 {/if}
                                 <button
                                     class="btn btn-primary btn-large"
-                                    disabled={!isNameValid && botName !== ""}
+                                    disabled={!isNameValid}
                                     on:click={() => (hireStep = "channel")}
                                 >
                                     Continue
@@ -773,7 +822,17 @@
                         {:else if hireStep === "config"}
                             <div
                                 class="form-step"
-                                in:fly={{ x: 20, duration: 200 }}
+                                on:keydown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        // Check if we can proceed (same logic as button disabled state)
+                                        const isWhatsAppValid = selectedChannel === "whatsapp" && phoneNumber.length >= 8 && apiKey.length >= 3;
+                                        const isTokenValid = ["telegram", "discord", "slack"].includes(selectedChannel || "") && botToken.length >= 10;
+                                        if (isWhatsAppValid || isTokenValid) {
+                                            hireStep = 'review';
+                                        }
+                                    }
+                                }}
                             >
                                 <h3>
                                     Connect {getChannelName(
@@ -790,6 +849,7 @@
                                             class="form-input"
                                             placeholder="Phone number (+1234567890)"
                                             bind:value={phoneNumber}
+                                            autofocus
                                         />
                                     </div>
                                     <div class="input-wrap" style="margin-top: 0.75rem;">
@@ -810,6 +870,7 @@
                                             class="form-input"
                                             placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
                                             bind:value={botToken}
+                                            autofocus
                                         />
                                     </div>
                                     <div class="instructions">
@@ -832,6 +893,7 @@
                                             class="form-input"
                                             placeholder="Discord bot token"
                                             bind:value={botToken}
+                                            autofocus
                                         />
                                     </div>
                                     <div class="instructions">
@@ -854,6 +916,7 @@
                                             class="form-input"
                                             placeholder="xoxb-1234567890-1234567890-XXXXXXXXXXXXXXXXXXXXXXXX"
                                             bind:value={botToken}
+                                            autofocus
                                         />
                                     </div>
                                     <div class="instructions">
@@ -902,7 +965,14 @@
                         {:else if hireStep === "review"}
                             <div
                                 class="form-step"
-                                in:fly={{ x: 20, duration: 200 }}
+                                on:keydown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        if (canLaunch && !isLaunching) {
+                                            handleLaunch();
+                                        }
+                                    }
+                                }}
                             >
                                 <h3>Ready to hire?</h3>
                                 <div class="review-box">

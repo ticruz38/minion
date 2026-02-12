@@ -8,6 +8,7 @@
   export let onSelectMinion: (index: number) => void;
   export let filterIndices: number[] | null = null;
   export let layout: 'carousel' | 'grid' = 'carousel';
+  export let selectedEmotion: 'neutral' | 'happy' | 'excited' | 'focused' | 'sad' | 'wonder' = 'neutral';
 
   let container: HTMLDivElement;
   let scene: THREE.Scene;
@@ -911,12 +912,131 @@
     }
 
     updateLayout(time);
+    updateEmotions(time);
 
     if (particles) {
       particles.rotation.y = time * 0.02;
     }
 
     renderer.render(scene, camera);
+  }
+
+  // Update emotions for all visible robots
+  function updateEmotions(time: number) {
+    robotGroups.forEach((group, i) => {
+      const data = (group as any).userData;
+      if (!data) return;
+      
+      const isSelected = selectedMinionIndex >= 0 && i === visibleIndices[selectedMinionIndex];
+      const emotion = isSelected ? selectedEmotion : 'neutral';
+      
+      // Get eye references
+      const leftEye = data.leftEye as THREE.Mesh | undefined;
+      const rightEye = data.rightEye as THREE.Mesh | undefined;
+      const leftGlow = data.leftGlow as THREE.Mesh | undefined;
+      const rightGlow = data.rightGlow as THREE.Mesh | undefined;
+      
+      if (!leftEye || !rightEye) return;
+      
+      // Base eye materials
+      const eyeMat = leftEye.material as THREE.MeshBasicMaterial;
+      const glowMat = leftGlow?.material as THREE.MeshBasicMaterial | undefined;
+      
+      // Emotion parameters
+      let eyeColor = 0xffd4a3;
+      let glowOpacity = 0.3;
+      let eyeScale = 1;
+      let eyeOffsetY = 0;
+      let pulseSpeed = 0;
+      
+      switch (emotion) {
+        case 'happy':
+          eyeColor = 0xffea00;  // Bright yellow
+          glowOpacity = 0.9;    // Very bright glow
+          eyeScale = 1.25;      // Bigger eyes
+          pulseSpeed = 10;      // Fast pulse
+          break;
+        case 'excited':
+          eyeColor = 0x00ffff;  // Cyan
+          glowOpacity = 1.0;    // Max brightness
+          eyeScale = 1.35;      // Very big eyes
+          pulseSpeed = 15;      // Very fast pulse
+          break;
+        case 'focused':
+          eyeColor = 0xffffff;  // White
+          glowOpacity = 0.5;
+          eyeScale = 0.9;
+          pulseSpeed = 2;  // Slow steady pulse
+          break;
+        case 'sad':
+          eyeColor = 0x6699ff;  // Blue
+          glowOpacity = 0.2;
+          eyeScale = 0.8;
+          eyeOffsetY = -0.02;  // Droopy eyes
+          pulseSpeed = 1;  // Very slow
+          break;
+        case 'wonder':
+          eyeColor = 0xff88ff;  // Pink/purple
+          glowOpacity = 0.7;
+          eyeScale = 1.3;
+          pulseSpeed = 4;
+          break;
+        default: // neutral
+          eyeColor = 0xffd4a3;
+          glowOpacity = 0.3;
+          eyeScale = 1;
+          pulseSpeed = 0;
+      }
+      
+      // Apply eye color
+      eyeMat.color.setHex(eyeColor);
+      if (glowMat) {
+        glowMat.color.setHex(eyeColor);
+        // Pulsing glow effect
+        if (pulseSpeed > 0) {
+          const pulse = Math.sin(time * pulseSpeed) * 0.3 + 0.7;  // 0.4 to 1.0
+          glowMat.opacity = glowOpacity * pulse;
+        } else {
+          glowMat.opacity = glowOpacity;
+        }
+      }
+      
+      // Smoothly interpolate eye scale
+      const targetScale = eyeScale;
+      const currentScale = leftEye.scale.x;
+      const newScale = currentScale + (targetScale - currentScale) * 0.1;
+      leftEye.scale.setScalar(newScale);
+      rightEye.scale.setScalar(newScale);
+      
+      // Apply vertical offset (sad eyes droop)
+      const baseY = 0.1;
+      const targetY = baseY + eyeOffsetY;
+      leftEye.position.y += (targetY - leftEye.position.y) * 0.1;
+      rightEye.position.y += (targetY - rightEye.position.y) * 0.1;
+      if (leftGlow) leftGlow.position.y = leftEye.position.y;
+      if (rightGlow) rightGlow.position.y = rightEye.position.y;
+      
+      // Happy/excited bounce animation for selected minion
+      if (isSelected && (emotion === 'happy' || emotion === 'excited')) {
+        const bounceSpeed = emotion === 'excited' ? 12 : 8;
+        const bounceHeight = emotion === 'excited' ? 0.25 : 0.15;
+        const bounceY = Math.abs(Math.sin(time * bounceSpeed)) * bounceHeight;
+        group.position.y += bounceY * 0.15;  // More bounce!
+        
+        // Excited rotation wiggle
+        const wiggleSpeed = emotion === 'excited' ? 3 : 2;
+        const wiggleAmount = emotion === 'excited' ? 0.08 : 0.05;
+        const wiggle = Math.sin(time * bounceSpeed * wiggleSpeed) * wiggleAmount;
+        group.rotation.z = wiggle;
+        
+        // Happy little hop on Y rotation too
+        const hop = Math.sin(time * bounceSpeed * 0.5) * 0.03;
+        group.rotation.y += hop;
+      } else {
+        // Reset rotation
+        group.rotation.z += (0 - group.rotation.z) * 0.1;
+      }
+    });
   }
 
   function handleClick(event: MouseEvent) {
