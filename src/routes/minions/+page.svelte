@@ -914,7 +914,7 @@
                                         <input
                                             type="text"
                                             class="form-input"
-                                            placeholder="xoxb-1234567890-1234567890-XXXXXXXXXXXXXXXXXXXXXXXX"
+                                            placeholder="xoxb-your-token-here"
                                             bind:value={botToken}
                                             autofocus
                                         />
