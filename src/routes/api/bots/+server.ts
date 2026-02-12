@@ -2,8 +2,10 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import { error } from '@sveltejs/kit';
 import { z } from 'zod';
 import { nanoid } from 'nanoid';
+import { randomBytes } from 'crypto';
 import { getHealthyVms, selectBestVm } from '$lib/server/scheduler.js';
 import { registerBot, sendCommand, getTeamBots, type BotConfig, type BotCommand } from '$lib/server/bot-service.js';
+import { createTeam } from '$lib/server/team-service.js';
 import { apiLogger } from '$lib/server/logger.js';
 
 /**
@@ -140,9 +142,9 @@ const botCreationSchema = z.object({
 		.min(3, 'Name must be at least 3 characters')
 		.max(30, 'Name must be at most 30 characters')
 		.regex(/^[a-zA-Z0-9-]+$/, 'Name must be alphanumeric with hyphens only'),
-	// Team ID that owns the bot
+	// Team ID that owns the bot (optional - will auto-generate if not provided)
 	team_id: z.string()
-		.min(1, 'Team ID is required'),
+		.optional(),
 	// Multi-channel support with detailed configuration
 	channels: channelsSchema,
 	// Minion type/profile
@@ -151,6 +153,18 @@ const botCreationSchema = z.object({
 });
 
 type BotCreationRequest = z.infer<typeof botCreationSchema>;
+
+/**
+ * Generate a secure team ID using crypto-grade entropy
+ * Format: team_{base64url-encoded random bytes}
+ * Provides ~192 bits of entropy (24 bytes)
+ */
+function generateSecureTeamId(): string {
+	const entropy = randomBytes(24); // 192 bits
+	// Convert to base64url (URL-safe base64)
+	const base64 = entropy.toString('base64url');
+	return `team_${base64}`;
+}
 
 /**
  * Build the bot configuration from the creation request
@@ -283,9 +297,18 @@ export const POST: RequestHandler = async ({ request }) => {
 		// Generate unique bot ID
 		const botId = `bot_${nanoid(10)}`;
 		const vmId = selectedVm.vm_id;
-		const teamId = validatedData.team_id;
 		
-		apiLogger.debug('Generated bot ID', { requestId, botId, vmId, teamId });
+		// Generate or use provided team ID
+		const teamId = validatedData.team_id || generateSecureTeamId();
+		const isNewTeam = !validatedData.team_id;
+		
+		apiLogger.debug('Generated bot ID', { requestId, botId, vmId, teamId, isNewTeam });
+		
+		// Create team in Redis if it's a new team
+		if (isNewTeam) {
+			apiLogger.info('Creating new team', { requestId, teamId });
+			await createTeam(teamId, `${validatedData.name}'s Team`);
+		}
 		
 		// Build bot configuration
 		const botConfig = buildBotConfig(validatedData);
@@ -334,12 +357,14 @@ export const POST: RequestHandler = async ({ request }) => {
 			teamId 
 		});
 		
-		// Return success with bot details
+		// Return success with bot details and team info
 		return json({
 			success: true,
 			message: 'Bot created successfully',
 			bot_id: botId,
-			vm_id: vmId
+			vm_id: vmId,
+			team_id: teamId,
+			is_new_team: isNewTeam
 		}, { status: 201 });
 		
 	} catch (err) {

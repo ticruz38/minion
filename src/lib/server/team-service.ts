@@ -64,6 +64,48 @@ function getRedisClient(): Redis | null {
 }
 
 /**
+ * Create a new team in Redis
+ */
+export async function createTeam(
+	teamId: string,
+	name: string,
+	credits: number = 10
+): Promise<Team> {
+	teamLog.info('Creating new team in Redis', { teamId, name, credits });
+
+	const redis = getRedisClient();
+	if (!redis) {
+		teamLog.error('Cannot create team - Redis unavailable', { teamId });
+		throw new Error('Redis unavailable');
+	}
+
+	const now = new Date().toISOString();
+	const team: Team = {
+		team_id: teamId,
+		name,
+		credits,
+		created_at: now,
+	};
+
+	try {
+		await redis.hset(`team:${teamId}`, {
+			team_id: teamId,
+			name,
+			credits: String(credits),
+			created_at: now,
+		});
+		teamLog.info('Team created successfully', { teamId });
+		return team;
+	} catch (err) {
+		teamLog.error('Failed to create team in Redis', {
+			teamId,
+			error: err instanceof Error ? err.message : String(err)
+		});
+		throw err;
+	}
+}
+
+/**
  * Get team data from Redis
  * Returns default team data if not found
  */

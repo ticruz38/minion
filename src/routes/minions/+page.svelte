@@ -2,6 +2,7 @@
     import { goto } from "$app/navigation";
     import { fade, fly, scale } from "svelte/transition";
     import { cubicOut } from "svelte/easing";
+    import { onDestroy } from "svelte";
     import Minion3DScene from "$lib/components/Minion3DScene.svelte";
     import MinionAvatar3D from "$lib/components/MinionAvatar3D.svelte";
     import {
@@ -21,7 +22,7 @@
 
     // Hiring flow state
     let isHiring = false;
-    let hireStep: "name" | "channel" | "config" | "review" | "progress" =
+    let hireStep: "name" | "channel" | "config" | "review" | "progress" | "success" =
         "name";
     let botName = "";
     let selectedChannel: "whatsapp" | "telegram" | "discord" | "slack" | null = null;
@@ -31,7 +32,12 @@
     let signingSecret = ""; // For Slack signing secret
     let isLaunching = false;
     let createdBotId = "";
+    let createdTeamId = "";
+    let isNewTeam = false;
     let launchError = "";
+    let eventSource: EventSource | null = null;
+    let botStatus: "pending" | "acknowledged" | "ready" | "error" = "pending";
+    let botConnectionInfo: any = null;
 
     // Filter logic
     $: filteredIndices = searchQuery
@@ -219,7 +225,16 @@
     }
 
     function cancelHiring() {
+        // Clean up SSE connection
+        if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+        }
         isHiring = false;
+        botStatus = "pending";
+        botConnectionInfo = null;
+        createdTeamId = "";
+        isNewTeam = false;
     }
 
     function selectChannel(channel: string) {
@@ -240,6 +255,52 @@
             default:
                 return channel;
         }
+    }
+
+    function connectToBotEvents(botId: string) {
+        // Close any existing connection
+        if (eventSource) {
+            eventSource.close();
+        }
+        
+        botStatus = "pending";
+        botConnectionInfo = null;
+        
+        // Connect to SSE endpoint
+        eventSource = new EventSource(`/api/bots/${botId}/events`);
+        
+        eventSource.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                console.log("Bot status update:", data);
+                
+                switch (data.status) {
+                    case "ACKNOWLEDGED":
+                        botStatus = "acknowledged";
+                        break;
+                    case "SUCCESS":
+                        botStatus = "ready";
+                        botConnectionInfo = data.data?.connectionInfo || null;
+                        hireStep = "success";
+                        eventSource?.close();
+                        eventSource = null;
+                        break;
+                    case "ERROR":
+                        botStatus = "error";
+                        launchError = data.error?.message || "Failed to start bot";
+                        eventSource?.close();
+                        eventSource = null;
+                        break;
+                }
+            } catch (err) {
+                console.error("Failed to parse SSE event:", err);
+            }
+        };
+        
+        eventSource.onerror = (err) => {
+            console.error("SSE error:", err);
+            // Don't close on error, let it retry
+        };
     }
 
     async function handleLaunch() {
@@ -279,11 +340,17 @@
             const result = await response.json();
             if (response.ok && result.success) {
                 createdBotId = result.bot_id;
+                createdTeamId = result.team_id;
+                isNewTeam = result.is_new_team || false;
+                // Start listening for Redis events
+                connectToBotEvents(result.bot_id);
             } else {
                 launchError = result.message || "Failed to launch";
+                isLaunching = false;
             }
         } catch (error) {
             launchError = "Network error";
+            isLaunching = false;
         }
     }
 
@@ -323,6 +390,14 @@
             showAutocomplete = false;
         }
     }
+
+    // Clean up SSE on component destroy
+    onDestroy(() => {
+        if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+        }
+    });
 </script>
 
 <svelte:window on:click={handleClickOutside} on:keydown={handleKeydown} />
@@ -335,7 +410,7 @@
     />
 </svelte:head>
 
-<div class="page">
+<div class="page" class:has-selection={selectedMinion}>
     <!-- 3D Scene -->
     <div class="scene-wrapper">
         <Minion3DScene
@@ -448,7 +523,7 @@
                 class:active={!selectedTag}
                 on:click={() => {
                     selectedTag = null;
-                    selectedMinionIndex = -1;
+                    selectedMinionId = null;
                 }}
             >
                 All
@@ -459,7 +534,7 @@
                     class:active={selectedTag === tag}
                     on:click={() => {
                         selectedTag = tag;
-                        selectedMinionIndex = -1;
+                        selectedMinionId = null;
                     }}
                 >
                     {tag}
@@ -494,7 +569,7 @@
                 {#if !isHiring}
                     <button
                         class="close-btn"
-                        on:click={() => (selectedMinionIndex = -1)}
+                        on:click={() => (selectedMinionId = null)}
                     >
                         <svg
                             width="20"
@@ -867,6 +942,115 @@
                                     </button>
                                 </div>
                             </div>
+                        {:else if hireStep === "progress"}
+                            <div
+                                class="form-step progress-step"
+                                in:fly={{ x: 20, duration: 200 }}
+                            >
+                                <h3>Deploying {selectedMinion.name}...</h3>
+                                
+                                <div class="progress-status">
+                                    {#if botStatus === "pending"}
+                                        <div class="status-item active">
+                                            <span class="status-dot pulse"></span>
+                                            <span>Sending request...</span>
+                                        </div>
+                                    {:else if botStatus === "acknowledged"}
+                                        <div class="status-item done">
+                                            <span class="status-dot">✓</span>
+                                            <span>Request sent</span>
+                                        </div>
+                                        <div class="status-item active">
+                                            <span class="status-dot pulse"></span>
+                                            <span>Provisioning resources...</span>
+                                        </div>
+                                    {:else if botStatus === "ready"}
+                                        <div class="status-item done">
+                                            <span class="status-dot">✓</span>
+                                            <span>Request sent</span>
+                                        </div>
+                                        <div class="status-item done">
+                                            <span class="status-dot">✓</span>
+                                            <span>Resources allocated</span>
+                                        </div>
+                                        <div class="status-item active">
+                                            <span class="status-dot pulse"></span>
+                                            <span>Bot is starting...</span>
+                                        </div>
+                                    {:else if botStatus === "error"}
+                                        <div class="status-item error">
+                                            <span class="status-dot">✗</span>
+                                            <span>Failed to start</span>
+                                        </div>
+                                    {/if}
+                                </div>
+
+                                {#if launchError}
+                                    <div class="error-box">
+                                        <p>{launchError}</p>
+                                        <button class="btn btn-ghost" on:click={cancelHiring}>
+                                            Close
+                                        </button>
+                                    </div>
+                                {/if}
+                            </div>
+                        {:else if hireStep === "success"}
+                            <div
+                                class="form-step success-step"
+                                in:fly={{ x: 20, duration: 200 }}
+                            >
+                                <div class="success-icon">🎉</div>
+                                <h3>{selectedMinion.name} is ready!</h3>
+                                <p class="success-message">
+                                    Your minion has been deployed and is now online.
+                                </p>
+                                
+                                <!-- Team Information -->
+                                <div class="team-info-box">
+                                    <div class="team-header">
+                                        <span class="team-badge">{isNewTeam ? 'New Team Created' : 'Added to Team'}</span>
+                                    </div>
+                                    <p class="team-label">Your Team ID</p>
+                                    <div class="team-id-container">
+                                        <code class="team-id">{createdTeamId}</code>
+                                        <button 
+                                            class="copy-btn"
+                                            on:click={() => navigator.clipboard.writeText(createdTeamId)}
+                                            title="Copy team ID"
+                                        >
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="team-explanation">
+                                        <p class="team-save-warning">⚠️ <strong>Important:</strong> We don't store this ID anywhere! Save it now or ask your bot for it later.</p>
+                                        <ul>
+                                            <li><strong>Ask your bot:</strong> Message "what's my team id?" - your bot knows it and will tell you</li>
+                                            <li><strong>Add more bots:</strong> Use this same Team ID when creating new bots to add them to your team</li>
+                                            <li><strong>Merge teams:</strong> Message your bot "merge with team [ID]" to combine teams</li>
+                                            <li><strong>Share access:</strong> Give your Team ID to teammates so they can manage bots too</li>
+                                        </ul>
+                                        <p class="team-warning">🔒 Keep this ID safe - anyone with it can manage your bots!</p>
+                                    </div>
+                                </div>
+                                
+                                {#if botConnectionInfo}
+                                    <div class="connection-info">
+                                        <p>Connection details:</p>
+                                        <code>{JSON.stringify(botConnectionInfo, null, 2)}</code>
+                                    </div>
+                                {/if}
+                                <div class="btn-row">
+                                    <button class="btn btn-ghost" on:click={cancelHiring}>
+                                        Close
+                                    </button>
+                                    <button class="btn btn-primary" on:click={() => goto(`/team/${createdTeamId}`)}>
+                                        View My Team
+                                    </button>
+                                </div>
+                            </div>
                         {/if}
                     </div>
                 {/if}
@@ -999,6 +1183,11 @@
         width: 100%;
         max-width: 520px;
         padding: 0 1.5rem;
+        transition: transform 0.3s ease;
+    }
+    /* Shift search left when detail panel is open */
+    .page.has-selection .floating-search {
+        transform: translateX(calc(-50% - 200px));
     }
     .search-container {
         position: relative;
@@ -1137,6 +1326,10 @@
         -ms-overflow-style: none;
         mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
         -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+        transition: transform 0.3s ease;
+    }
+    .page.has-selection .tag-pills {
+        transform: translateX(calc(-50% - 200px));
     }
     .tag-pills::-webkit-scrollbar {
         display: none;
@@ -1218,11 +1411,14 @@
         top: 80px;
         right: 0;
         bottom: 0;
-        width: 420px;
+        width: 560px;
         z-index: 30;
-        padding: 1.5rem;
+        padding: 1.5rem 2.5rem;
         overflow-y: auto;
         pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
     .detail-panel > * {
         pointer-events: auto;
@@ -1233,15 +1429,31 @@
     }
 
     .detail-card {
-        background: rgba(15, 12, 10, 0.85);
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 20px;
-        padding: 1.5rem;
+        background: rgba(15, 12, 10, 0.9);
+        backdrop-filter: blur(24px);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 24px;
+        padding: 2rem;
         position: relative;
+        width: 100%;
+        height: 745px;
+        overflow-y: auto;
+        box-sizing: border-box;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+    .detail-card::-webkit-scrollbar {
+        display: none;
     }
     .detail-card.hiring {
         width: 100%;
+        height: 745px;
+        overflow-y: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+    .detail-card.hiring::-webkit-scrollbar {
+        display: none;
     }
 
     .close-btn {
@@ -1598,6 +1810,218 @@
         }
     }
 
+    /* Progress Step */
+    .progress-step {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    .progress-status {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    .status-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.03);
+        transition: all 0.3s ease;
+    }
+    .status-item.active {
+        background: rgba(212, 168, 83, 0.1);
+        border: 1px solid rgba(212, 168, 83, 0.2);
+    }
+    .status-item.done {
+        background: rgba(123, 163, 143, 0.1);
+        border: 1px solid rgba(123, 163, 143, 0.2);
+    }
+    .status-item.error {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+    .status-dot {
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+    }
+    .status-dot.pulse {
+        background: #d4a853;
+        border-radius: 50%;
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(0.8); }
+    }
+    .error-box {
+        padding: 1rem;
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        border-radius: 10px;
+        text-align: center;
+    }
+    .error-box p {
+        color: #ef4444;
+        margin-bottom: 0.75rem;
+    }
+
+    /* Success Step */
+    .success-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 1rem;
+        padding: 1rem 0;
+    }
+    .success-icon {
+        font-size: 4rem;
+        animation: bounce 0.6s ease-out;
+    }
+    @keyframes bounce {
+        0% { transform: scale(0); }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); }
+    }
+    .success-message {
+        color: rgba(247, 245, 240, 0.7);
+        margin-bottom: 0.5rem;
+    }
+    .connection-info {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        text-align: left;
+    }
+    .connection-info p {
+        font-size: 0.75rem;
+        color: rgba(247, 245, 240, 0.5);
+        margin-bottom: 0.5rem;
+    }
+    .connection-info code {
+        display: block;
+        font-size: 0.75rem;
+        color: #d4a853;
+        background: rgba(0, 0, 0, 0.3);
+        padding: 0.75rem;
+        border-radius: 6px;
+        overflow-x: auto;
+    }
+
+    /* Team Info Box */
+    .team-info-box {
+        background: rgba(212, 168, 83, 0.08);
+        border: 1px solid rgba(212, 168, 83, 0.2);
+        border-radius: 16px;
+        padding: 1.25rem;
+        margin: 0.5rem 0;
+        text-align: left;
+        width: 100%;
+    }
+    .team-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+    .team-badge {
+        background: linear-gradient(135deg, #d4a853 0%, #c9963c 100%);
+        color: #0f0c0a;
+        padding: 0.25rem 0.75rem;
+        border-radius: 100px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .team-label {
+        font-size: 0.75rem;
+        color: rgba(247, 245, 240, 0.5);
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .team-id-container {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .team-id {
+        flex: 1;
+        font-size: 0.8rem;
+        color: #d4a853;
+        background: rgba(0, 0, 0, 0.4);
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        word-break: break-all;
+        font-family: 'JetBrains Mono', monospace;
+    }
+    .copy-btn {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 10px;
+        color: rgba(247, 245, 240, 0.8);
+        cursor: pointer;
+        transition: all 0.2s;
+        flex-shrink: 0;
+    }
+    .copy-btn:hover {
+        background: rgba(212, 168, 83, 0.2);
+        border-color: rgba(212, 168, 83, 0.4);
+        color: #d4a853;
+    }
+    .team-explanation {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 10px;
+        padding: 1rem;
+    }
+    .team-explanation p {
+        font-size: 0.875rem;
+        color: rgba(247, 245, 240, 0.8);
+        margin-bottom: 0.5rem;
+        line-height: 1.5;
+    }
+    .team-explanation ul {
+        margin: 0.75rem 0;
+        padding-left: 1.25rem;
+    }
+    .team-explanation li {
+        font-size: 0.8125rem;
+        color: rgba(247, 245, 240, 0.65);
+        margin-bottom: 0.5rem;
+        line-height: 1.4;
+    }
+    .team-explanation li strong {
+        color: rgba(247, 245, 240, 0.9);
+    }
+    .team-save-warning {
+        background: rgba(212, 168, 83, 0.15);
+        border: 1px solid rgba(212, 168, 83, 0.3);
+        border-radius: 8px;
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
+        font-size: 0.8125rem;
+        color: #d4a853 !important;
+    }
+    .team-warning {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        font-size: 0.75rem;
+        color: rgba(247, 245, 240, 0.5) !important;
+    }
+
     /* Mobile */
     @media (max-width: 768px) {
         .floating-search {
@@ -1618,6 +2042,19 @@
             right: 0;
             max-height: 70vh;
             padding: 1rem;
+            justify-content: flex-end;
+        }
+        .detail-card, .detail-card.hiring {
+            padding: 1.25rem;
+            border-radius: 20px 20px 0 0;
+            height: auto;
+            max-height: 65vh;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .detail-card::-webkit-scrollbar,
+        .detail-card.hiring::-webkit-scrollbar {
+            display: none;
         }
         .keyboard-hint-floating {
             display: none;

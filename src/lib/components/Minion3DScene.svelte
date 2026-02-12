@@ -653,6 +653,11 @@
         originalY: 0,
         floatSpeed: 0.5 + (i * 0.05),
         floatOffset: i * 0.5,
+        // Wandering state
+        homeX: 0, homeY: 0, homeZ: 0,
+        wanderOffset: { x: 0, y: 0, z: 0 },
+        wanderTargetOffset: { x: 0, y: 0, z: 0 },
+        wanderTime: 0,
       };
 
       // Mark the body with the index for click detection
@@ -707,8 +712,8 @@
     mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
   }
 
-  // Camera offset when minion is selected
-  $: cameraOffsetX = selectedMinionIndex >= 0 ? -2 : 0;
+  // Camera offset when minion is selected - shift camera to frame minion on left
+  $: cameraOffsetX = selectedMinionIndex >= 0 ? -3 : 0;
   let currentCameraOffsetX = 0;
 
   function updateLayout(time: number) {
@@ -738,67 +743,150 @@
         group.scale.lerp(new THREE.Vector3(0.01, 0.01, 0.01), 0.1);
         group.position.z += (-10 - group.position.z) * 0.05;
       } else if (isFocusMode && isSelected) {
-        // Focus mode - centered, gentle bob
-        const targetX = currentCameraOffsetX;
-        const targetY = floatY;
-        const targetZ = -2;
+        // Focus mode - position minion on LEFT side of screen, keep wandering!
+        const homeX = currentCameraOffsetX - 1.5;  // Left side base position
+        const homeY = 0;
+        const homeZ = -1;
+        
+        // Store home for wandering
+        data.homeX = homeX;
+        data.homeY = homeY;
+        data.homeZ = homeZ;
+        
+        // Wandering behavior even when selected (lively!)
+        const now = performance.now();
+        
+        if (data.wanderOffset === undefined) {
+          data.wanderOffset = { x: 0, y: 0, z: 0 };
+          data.wanderTargetOffset = { x: 0, y: 0, z: 0 };
+          data.wanderTime = now;
+        }
+        
+        const distToTarget = Math.sqrt(
+          Math.pow(data.wanderTargetOffset.x - data.wanderOffset.x, 2) +
+          Math.pow(data.wanderTargetOffset.y - data.wanderOffset.y, 2) +
+          Math.pow(data.wanderTargetOffset.z - data.wanderOffset.z, 2)
+        );
+        
+        if (now > data.wanderTime || distToTarget < 0.05) {
+          // Larger perimeter when selected (more visible movement)
+          const perimeterX = 1.5;
+          const perimeterY = 0.8;
+          const perimeterZ = 1.0;
+          
+          data.wanderTargetOffset.x = (Math.random() - 0.5) * 2 * perimeterX;
+          data.wanderTargetOffset.y = (Math.random() - 0.5) * 2 * perimeterY;
+          data.wanderTargetOffset.z = (Math.random() - 0.5) * 2 * perimeterZ;
+          
+          data.wanderTime = now + 1500 + Math.random() * 3000;
+        }
+        
+        // Smooth drift
+        const driftSpeed = 0.02;
+        data.wanderOffset.x += (data.wanderTargetOffset.x - data.wanderOffset.x) * driftSpeed;
+        data.wanderOffset.y += (data.wanderTargetOffset.y - data.wanderOffset.y) * driftSpeed;
+        data.wanderOffset.z += (data.wanderTargetOffset.z - data.wanderOffset.z) * driftSpeed;
+        
+        // Apply position with wander
+        group.position.x += (homeX + data.wanderOffset.x - group.position.x) * 0.05;
+        group.position.y += (homeY + data.wanderOffset.y - group.position.y) * 0.05;
+        group.position.z += (homeZ + data.wanderOffset.z - group.position.z) * 0.05;
+        
+        // Look toward wander direction
+        const lookDir = Math.atan2(data.wanderTargetOffset.x, data.wanderTargetOffset.z);
+        if (distToTarget > 0.1) {
+          data.lookAngle = lookDir * 0.4;
+        }
+        group.rotation.y += (data.lookAngle - group.rotation.y) * data.lookSpeed;
 
-        group.position.x += (targetX - group.position.x) * 0.05;
-        group.position.y += (targetY - group.position.y) * 0.05;
-        group.position.z += (targetZ - group.position.z) * 0.05;
-
-        group.scale.lerp(new THREE.Vector3(1.3, 1.3, 1.3), 0.08);
-      } else if (layout === 'carousel') {
-        // Carousel layout
-        const count = visibleIndices.length;
-        const angleStep = Math.PI / 6;
-        const selectedIdx = Math.floor(count / 2);
-        const angle = (visibleIndex - selectedIdx) * angleStep;
-        const radius = 6;
-
-        const targetX = Math.sin(angle) * radius + currentCameraOffsetX;
-        const targetZ = Math.cos(angle) * radius * 0.5 - 2;
-        const targetY = floatY + 0.5;
-
-        group.position.x += (targetX - group.position.x) * 0.05;
-        group.position.z += (targetZ - group.position.z) * 0.05;
-        group.position.y = targetY;
-
-        group.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1);
+        group.scale.lerp(new THREE.Vector3(1.6, 1.6, 1.6), 0.08);  // Bigger!
       } else {
-        // Grid layout
-        const cols = Math.min(visibleCount, 4);
-        const col = visibleIndex % cols;
-        const row = Math.floor(visibleIndex / cols);
-        const spacing = visibleCount <= 2 ? 4 : 3;
-
-        const targetX = (col - (cols - 1) / 2) * spacing + currentCameraOffsetX;
-        const baseY = visibleCount === 1 ? -1.5 : -1.0;
-        const maxRows = Math.ceil(visibleCount / cols);
-        const rowOffset = (maxRows - 1) / 2;
-        const targetY = baseY + (rowOffset - row) * spacing * 0.6 + floatY;
-        const targetZ = visibleCount === 1 ? -1.5 : -3;
-
-        group.position.x += (targetX - group.position.x) * 0.05;
-        group.position.y += (targetY - group.position.y) * 0.05;
-        group.position.z += (targetZ - group.position.z) * 0.05;
-
-        const baseScale = visibleCount === 1 ? 1.5 : visibleCount <= 4 ? 1.2 : 1.0;
+        // Calculate home position based on layout
+        let homeX = 0, homeY = 0, homeZ = 0;
+        
+        if (layout === 'carousel') {
+          const count = visibleIndices.length;
+          const angleStep = Math.PI / 6;
+          const selectedIdx = Math.floor(count / 2);
+          const angle = (visibleIndex - selectedIdx) * angleStep;
+          const radius = 6;
+          homeX = Math.sin(angle) * radius + currentCameraOffsetX;
+          homeZ = Math.cos(angle) * radius * 0.5 - 2;
+          homeY = floatY + 0.5;
+        } else {
+          // Grid layout
+          const cols = Math.min(visibleCount, 4);
+          const col = visibleIndex % cols;
+          const row = Math.floor(visibleIndex / cols);
+          const spacing = visibleCount <= 2 ? 4 : 3;
+          const maxRows = Math.ceil(visibleCount / cols);
+          const rowOffset = (maxRows - 1) / 2;
+          const baseY = visibleCount === 1 ? -1.5 : -1.0;
+          
+          homeX = (col - (cols - 1) / 2) * spacing + currentCameraOffsetX;
+          homeY = baseY + (rowOffset - row) * spacing * 0.6 + floatY;
+          homeZ = visibleCount === 1 ? -1.5 : -3;
+        }
+        
+        // Store home position for wandering reference
+        data.homeX = homeX;
+        data.homeY = homeY;
+        data.homeZ = homeZ;
+        
+        // Wandering behavior - roam within 3D perimeter around home
+        const now = performance.now();
+        
+        // Initialize wander offset if not set
+        if (data.wanderOffset === undefined) {
+          data.wanderOffset = { x: 0, y: 0, z: 0 };
+          data.wanderTargetOffset = { x: 0, y: 0, z: 0 };
+          data.wanderTime = now;
+        }
+        
+        // Pick new wander target periodically or when close to target
+        const distToTarget = Math.sqrt(
+          Math.pow(data.wanderTargetOffset.x - data.wanderOffset.x, 2) +
+          Math.pow(data.wanderTargetOffset.y - data.wanderOffset.y, 2) +
+          Math.pow(data.wanderTargetOffset.z - data.wanderOffset.z, 2)
+        );
+        
+        if (now > data.wanderTime || distToTarget < 0.05) {
+          // Define 3D perimeter (±1.2 units on X/Z, ±0.6 on Y)
+          const perimeterX = 1.2;
+          const perimeterY = 0.6;
+          const perimeterZ = 1.2;
+          
+          data.wanderTargetOffset.x = (Math.random() - 0.5) * 2 * perimeterX;
+          data.wanderTargetOffset.y = (Math.random() - 0.5) * 2 * perimeterY;
+          data.wanderTargetOffset.z = (Math.random() - 0.5) * 2 * perimeterZ;
+          
+          // Next wander in 1.5-5 seconds
+          data.wanderTime = now + 1500 + Math.random() * 3500;
+        }
+        
+        // Smoothly drift toward wander target
+        const driftSpeed = 0.015;
+        data.wanderOffset.x += (data.wanderTargetOffset.x - data.wanderOffset.x) * driftSpeed;
+        data.wanderOffset.y += (data.wanderTargetOffset.y - data.wanderOffset.y) * driftSpeed;
+        data.wanderOffset.z += (data.wanderTargetOffset.z - data.wanderOffset.z) * driftSpeed;
+        
+        // Apply position: home + wander offset
+        group.position.x += (homeX + data.wanderOffset.x - group.position.x) * 0.05;
+        group.position.y += (homeY + data.wanderOffset.y - group.position.y) * 0.05;
+        group.position.z += (homeZ + data.wanderOffset.z - group.position.z) * 0.05;
+        
+        // Look toward wander direction
+        const lookDir = Math.atan2(data.wanderTargetOffset.x, data.wanderTargetOffset.z);
+        if (distToTarget > 0.1) {
+          data.lookAngle = lookDir * 0.4;
+        }
+        group.rotation.y += (data.lookAngle - group.rotation.y) * data.lookSpeed;
+        
+        // Scale
+        const baseScale = layout === 'carousel' ? 1 : (visibleCount === 1 ? 1.5 : visibleCount <= 4 ? 1.2 : 1.0);
         const targetScale = isSelected ? baseScale * 1.1 : baseScale;
         group.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
       }
-
-      // Random looking behavior - each minion looks left/right independently
-      const now = performance.now();
-      if (now > data.lookChangeTime) {
-        // Pick new random look angle (-0.4 to 0.4 radians = ±23 degrees)
-        data.lookAngle = (Math.random() - 0.5) * 0.8;
-        // Next change in 1-4 seconds
-        data.lookChangeTime = now + 1000 + Math.random() * 3000;
-      }
-      
-      // Smoothly rotate toward look angle
-      group.rotation.y += (data.lookAngle - group.rotation.y) * data.lookSpeed;
     });
   }
 
